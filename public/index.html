@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RSSReader</title>
+<meta name="description" content="Private RSS reader with server-side fetching and offline reading.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#0c0d10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RSSReader">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/app/styles.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <a class="brand" href="/" data-link>
+      <span class="brand-mark"></span>
+      <span class="brand-name">RSSReader</span>
+    </a>
+    <button id="sync-pill" class="pill" type="button" aria-live="polite">Synced</button>
+  </header>
+  <nav id="sidebar" class="sidebar" aria-label="Feeds"></nav>
+  <main id="view" class="view"></main>
+  <nav class="tabbar">
+    <a class="tab" href="/" data-link data-route="articles">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span>Articles</span>
+    </a>
+    <a class="tab" href="/feeds" data-link data-route="feeds">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19a1 1 0 100-2 1 1 0 000 2M5 12a7 7 0 017 7M5 5a14 14 0 0114 14"/></svg>
+      <span>Feeds</span>
+    </a>
+    <a class="tab" href="/settings" data-link data-route="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+      <span>Settings</span>
+    </a>
+  </nav>
+</div>
+<div id="sheet-host"></div>
+<div id="toast-host" class="toast-host" role="status" aria-live="polite"></div>
+<script type="module" src="/app/main.js"></script>
+</body>
+</html>

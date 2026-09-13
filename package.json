@@ -1,0 +1,17 @@
+{
+  "name": "rssreader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create rssreader",
+    "db:migrate": "wrangler d1 migrations apply rssreader --local",
+    "db:migrate:remote": "wrangler d1 migrations apply rssreader --remote",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "4.131.1"
+  }
+}
