@@ -1,4 +1,4 @@
-const VERSION = "v19";
+const VERSION = "v20";
 const CACHE = `rssreader-${VERSION}`;
 
 const SHELL = [

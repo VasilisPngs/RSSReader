@@ -824,7 +824,7 @@ textarea:focus {
   }
 }
 
-@media (min-width: 960px) {
+@media (min-width: 900px) {
   :root {
     --tabbar: 0px;
   }
