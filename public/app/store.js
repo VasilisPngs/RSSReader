@@ -1,6 +1,7 @@
 import { TABLE_NAMES, readAll, writeRows, putLocal, getMeta, pruneArticles } from "./db.js";
 import { keepDefaultLanguage } from "./lang.js";
 import { extractReadable } from "./readable.js";
+import { decodeBody } from "./decode.js";
 import { scheduleSync, syncEvents, apiPost, apiPostText } from "./sync.js";
 
 export const RETENTION_DAYS = 45;
@@ -309,7 +310,7 @@ async function fetchFullArticle(articleId) {
   const article = cache.articles.get(articleId);
   if (!article || !article.url) return null;
   const page = await apiPostText("/api/page", { id: articleId }, 25000);
-  const content = extractReadable(page.text, page.finalUrl || article.url);
+  const content = extractReadable(decodeBody(page.buffer, page.upstreamType), page.finalUrl || article.url);
   if (!content) return null;
   const row = { ...article, content };
   cache.articles.set(row.id, row);

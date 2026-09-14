@@ -87,7 +87,11 @@ export async function apiPostText(path, body, timeout = REQUEST_TIMEOUT) {
     error.status = response.status;
     throw error;
   }
-  return { text: await response.text(), finalUrl: response.headers.get("x-final-url") || null };
+  return {
+    buffer: await response.arrayBuffer(),
+    upstreamType: response.headers.get("x-upstream-type") || "",
+    finalUrl: response.headers.get("x-final-url") || null
+  };
 }
 
 function postSync(body) {

@@ -1,4 +1,5 @@
 import { parseFeed } from "./feed.js";
+import { decodeBody } from "../public/app/decode.js";
 import { notifySubscribers } from "./push.js";
 
 const USER_AGENT = "RSSReader/1.0 (Cloudflare Workers; personal reader)";
@@ -51,6 +52,16 @@ function nextInterval(current, outcome) {
   return Math.min(MAX_INTERVAL, Math.round(base * 1.25));
 }
 
+function retryAfterSeconds(response) {
+  const raw = response.headers.get("retry-after");
+  if (!raw) return null;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds) && seconds > 0) return Math.min(seconds, MAX_ERROR_INTERVAL);
+  const date = Date.parse(raw);
+  if (!Number.isFinite(date)) return response.status === 429 ? 3600 : null;
+  return Math.min(Math.max(Math.round((date - Date.now()) / 1000), 60), MAX_ERROR_INTERVAL);
+}
+
 async function fetchFeed(feed) {
   const headers = { "user-agent": USER_AGENT, accept: ACCEPT };
   if (feed.etag) headers["if-none-match"] = feed.etag;
@@ -58,13 +69,14 @@ async function fetchFeed(feed) {
   const response = await fetch(feed.feed_url, { headers, redirect: "follow" });
   if (response.status === 304) return { status: 304 };
   if (!response.ok) {
-    return { status: response.status, error: `HTTP ${response.status}` };
+    return { status: response.status, error: `HTTP ${response.status}`, retryAfter: retryAfterSeconds(response) };
   }
   const declared = Number(response.headers.get("content-length") || 0);
   if (declared > MAX_BODY_BYTES) {
     return { status: response.status, error: "feed too large" };
   }
-  const body = await response.text();
+  const buffer = await response.arrayBuffer();
+  const body = decodeBody(buffer.byteLength > MAX_BODY_BYTES ? buffer.slice(0, MAX_BODY_BYTES) : buffer, response.headers.get("content-type"));
   return {
     status: response.status,
     body: body.length > MAX_BODY_BYTES ? body.slice(0, MAX_BODY_BYTES) : body,
@@ -132,7 +144,7 @@ export async function pollFeeds(env, feeds, now, options = {}) {
         etag: feed.etag,
         last_modified: feed.last_modified,
         last_fetch_at: now,
-        interval_seconds: Math.min(MAX_ERROR_INTERVAL, ERROR_BASE_INTERVAL * 2 ** Math.min(errors, 5)),
+        interval_seconds: result.retryAfter || Math.min(MAX_ERROR_INTERVAL, ERROR_BASE_INTERVAL * 2 ** Math.min(errors, 5)),
         last_status: result.status || 0,
         error_count: errors,
         last_error: (result.error || "empty response").slice(0, 200)

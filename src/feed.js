@@ -137,7 +137,7 @@ function timestampOf(block, fallback) {
   const raw = textOf(tagText(block, ["published", "pubDate", "updated", "dc:date", "date"]));
   if (raw) {
     const parsed = Date.parse(raw);
-    if (Number.isFinite(parsed)) return parsed;
+    if (Number.isFinite(parsed)) return Math.min(parsed, fallback);
   }
   return fallback;
 }

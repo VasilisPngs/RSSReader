@@ -2,6 +2,7 @@ import { handleSync, json } from "./sync.js";
 import { pollFeeds, selectDueFeeds, runScheduled, articleMessage, MAX_FEEDS_PER_TICK } from "./poller.js";
 import { parseFeed, discoverFeedUrl, looksLikeFeed } from "./feed.js";
 import { loadKeys, notifySubscribers } from "./push.js";
+import { decodeBody } from "../public/app/decode.js";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
 const BLOCKED_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal"]);
@@ -39,8 +40,9 @@ async function loadDocument(target) {
     signal: AbortSignal.timeout(DISCOVER_TIMEOUT)
   });
   if (!response.ok) return { error: `HTTP ${response.status}` };
-  const body = await response.text();
-  return { body: body.slice(0, 1000000), finalUrl: response.url || target.toString() };
+  const buffer = await response.arrayBuffer();
+  const body = decodeBody(buffer.byteLength > 1000000 ? buffer.slice(0, 1000000) : buffer, response.headers.get("content-type"));
+  return { body, finalUrl: response.url || target.toString() };
 }
 
 async function handleDiscover(request, env) {
@@ -164,11 +166,6 @@ const MAX_READABLE_CHARS = 200000;
 const BROWSER_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
 const USER_AGENT = "Mozilla/5.0 (compatible; RSSReader/1.0; personal reader)";
 
-function charsetOf(contentType) {
-  const match = /charset\s*=\s*"?([\w-]+)/i.exec(contentType || "");
-  return match ? match[1] : "utf-8";
-}
-
 async function handlePage(request, env) {
   let payload;
   try {
@@ -192,12 +189,26 @@ async function handlePage(request, env) {
     return json({ error: "unreachable", detail: String(error && error.message).slice(0, 120) }, 502);
   }
   if (!upstream.ok) return json({ error: "unreachable", detail: `HTTP ${upstream.status}` }, 502);
+  const upstreamType = upstream.headers.get("content-type") || "";
+  if (!/^\s*(text\/html|application\/xhtml\+xml)/i.test(upstreamType)) {
+    return json({ error: "not_html", detail: upstreamType.slice(0, 80) }, 415);
+  }
   if (Number(upstream.headers.get("content-length") || 0) > MAX_PAGE_BYTES) return json({ error: "too_large" }, 413);
 
-  return new Response(upstream.body, {
+  let seen = 0;
+  const capped = new TransformStream({
+    transform(chunk, controller) {
+      seen += chunk.byteLength;
+      if (seen > MAX_PAGE_BYTES) controller.error(new Error("too_large"));
+      else controller.enqueue(chunk);
+    }
+  });
+
+  return new Response(upstream.body.pipeThrough(capped), {
     headers: {
-      "content-type": `text/plain; charset=${charsetOf(upstream.headers.get("content-type"))}`,
+      "content-type": "application/octet-stream",
       "cache-control": "no-store",
+      "x-upstream-type": upstreamType.slice(0, 120),
       "x-final-url": upstream.url || target.toString()
     }
   });
