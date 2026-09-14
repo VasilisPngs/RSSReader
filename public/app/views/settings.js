@@ -3,6 +3,7 @@ import { readAll, TABLE_NAMES } from "../db.js";
 import { RETENTION_DAYS, feedsSorted, unreadTotal, starredCount, lastSyncedAt } from "../store.js";
 import { getSyncState, requestSync } from "../sync.js";
 import { t, language, languages, setLanguage } from "../i18n.js";
+import { themeMode, themeModes, setTheme } from "../theme.js";
 
 const SHORTCUTS = [
   ["j / ↓", "keyNext"],
@@ -53,6 +54,24 @@ export function renderSettings(container) {
     }),
     el("div", { class: "tiny", id: "last-sync", text: t("lastSync", { value: t("unknown") }) }),
     storage,
+    el("label", { class: "tiny", text: t("theme") }),
+    el(
+      "select",
+      {
+        onchange: (event) => {
+          const next = event.target.value;
+          event.target.blur();
+          setTheme(next);
+        }
+      },
+      themeModes().map((mode) =>
+        el("option", {
+          value: mode,
+          text: t(`theme${mode[0].toUpperCase()}${mode.slice(1)}`),
+          selected: mode === themeMode()
+        })
+      )
+    ),
     el("label", { class: "tiny", text: t("language") }),
     el(
       "select",

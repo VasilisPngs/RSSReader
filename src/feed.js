@@ -166,7 +166,8 @@ export function parseFeed(xml, options = {}) {
       author: textOf(tagText(body, ["dc:creator", "author"])).slice(0, 120) || null,
       summary: plainText(rawSummary || rawContent).slice(0, MAX_SUMMARY) || null,
       content: content || null,
-      published_at: timestampOf(body, fetchedAt)
+      published_at: timestampOf(body, fetchedAt),
+      image_url: imageOf(body, content)
     });
   }
 
@@ -175,6 +176,32 @@ export function parseFeed(xml, options = {}) {
     siteUrl: linkOf(header) || null,
     items
   };
+}
+
+const MEDIA_TAGS = /<(media:thumbnail|media:content|enclosure)\b[^>]*>/gi;
+
+export function imageOf(block, html) {
+  MEDIA_TAGS.lastIndex = 0;
+  let match;
+  while ((match = MEDIA_TAGS.exec(block)) !== null) {
+    const head = match[0];
+    const url = attribute(head, "url");
+    if (!url || !/^https?:\/\//i.test(url)) continue;
+    const type = attribute(head, "type").toLowerCase();
+    const medium = attribute(head, "medium").toLowerCase();
+    if (match[1].toLowerCase() === "enclosure" && !type.startsWith("image")) continue;
+    if (medium && medium !== "image") continue;
+    if (type && !type.startsWith("image")) continue;
+    return url;
+  }
+  if (html) {
+    const inline = html.match(/<img\b[^>]*?\bsrc\s*=\s*("([^"]+)"|'([^']+)')/i);
+    if (inline) {
+      const src = decodeText(inline[2] !== undefined ? inline[2] : inline[3]);
+      if (/^https?:\/\//i.test(src)) return src;
+    }
+  }
+  return null;
 }
 
 export function discoverFeedUrl(html, baseUrl) {

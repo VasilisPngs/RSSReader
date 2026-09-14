@@ -7,6 +7,7 @@ import { renderArticle } from "./views/article.js";
 import { renderFeeds } from "./views/feeds.js";
 import { renderSettings } from "./views/settings.js";
 import { t, applyLanguage, i18nEvents } from "./i18n.js";
+import { applyTheme, themeEvents } from "./theme.js";
 
 const view = document.getElementById("view");
 const pill = document.getElementById("sync-pill");
@@ -233,12 +234,14 @@ pill.addEventListener("click", () => {
 async function boot() {
   if (new URL(location.href).searchParams.has("signin")) history.replaceState({}, "", location.pathname);
   applyLanguage();
+  applyTheme();
   await initStore();
   storeEvents.addEventListener("changed", render);
   i18nEvents.addEventListener("changed", () => {
     render();
     paintPill();
   });
+  themeEvents.addEventListener("changed", render);
   syncEvents.addEventListener("state", paintPill);
   startRouter(render);
   paintPill();

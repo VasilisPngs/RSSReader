@@ -1,4 +1,4 @@
-import { el, clear, formatTimestamp, plural, hostnameOf, toast, confirmSheet } from "../dom.js";
+import { el, clear, formatTimestamp, plural, hostnameOf, siteIcon, toast, confirmSheet } from "../dom.js";
 import {
   selectArticles,
   stateOf,
@@ -53,6 +53,18 @@ function scopeTitle(params) {
 function articleRow(article, params) {
   const state = stateOf(article.id);
   const feed = feedById(article.feed_id);
+  const thumb = article.image_url
+    ? el("img", {
+        class: "entry-thumb",
+        src: article.image_url,
+        alt: "",
+        loading: "lazy",
+        referrerPolicy: "no-referrer",
+        decoding: "async"
+      })
+    : null;
+  if (thumb) thumb.addEventListener("error", () => thumb.remove(), { once: true });
+
   const row = el("article", { class: `entry${state.is_read ? " read" : ""}`, dataset: { id: article.id } }, [
     el("button", {
       class: "entry-main",
@@ -63,12 +75,16 @@ function articleRow(article, params) {
         navigate(`/article/${article.id}`);
       }
     }, [
-      el("div", { class: "entry-meta" }, [
-        el("span", { class: "entry-feed", text: feed ? feed.title : hostnameOf(article.url) }),
-        el("span", { text: formatTimestamp(article.published_at) })
-      ]),
-      el("h3", { class: "entry-title", text: article.title || "(untitled)" }),
-      article.summary ? el("p", { class: "entry-summary", text: article.summary }) : null
+      thumb,
+      el("div", { class: "entry-text" }, [
+        el("div", { class: "entry-meta" }, [
+          siteIcon(feed ? feed.site_url || feed.feed_url : article.url, feed ? feed.title : ""),
+          el("span", { class: "entry-feed", text: feed ? feed.title : hostnameOf(article.url) }),
+          el("span", { text: formatTimestamp(article.published_at) })
+        ]),
+        el("h3", { class: "entry-title", text: article.title || "(untitled)" }),
+        article.summary ? el("p", { class: "entry-summary", text: article.summary }) : null
+      ])
     ]),
     el("div", { class: "entry-actions" }, [
       el("button", {

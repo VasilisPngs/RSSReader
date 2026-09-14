@@ -111,6 +111,10 @@ const STRINGS = {
 
   settingsTitle: ["Settings", "Ρυθμίσεις"],
   language: ["Language", "Γλώσσα"],
+  theme: ["Theme", "Θέμα"],
+  themeSystem: ["System", "Σύστημα"],
+  themeLight: ["Light", "Φωτεινό"],
+  themeDark: ["Dark", "Σκοτεινό"],
   sync: ["Sync", "Συγχρονισμός"],
   syncStatus: ["Status: {status}", "Κατάσταση: {status}"],
   queuedChanges: ["{count} queued", "{count} σε ουρά"],

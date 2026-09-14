@@ -46,7 +46,7 @@ async function fetchFeed(feed) {
 }
 
 function articleStatements(rows, rev) {
-  const columns = ["id", "feed_id", "guid", "url", "title", "author", "summary", "content", "published_at", "fetched_at"];
+  const columns = ["id", "feed_id", "guid", "url", "title", "author", "summary", "content", "image_url", "published_at", "fetched_at"];
   const perStatement = Math.max(1, Math.floor(INSERT_PARAMS / columns.length));
   const statements = [];
   for (let index = 0; index < rows.length; index += perStatement) {
@@ -55,7 +55,7 @@ function articleStatements(rows, rev) {
     const params = [];
     for (const row of chunk) for (const column of columns) params.push(row[column]);
     statements.push({
-      sql: `INSERT INTO articles (${columns.join(", ")}, rev) VALUES ${placeholders} ON CONFLICT(feed_id, guid) DO NOTHING`,
+      sql: `INSERT INTO articles (${columns.join(", ")}, rev) VALUES ${placeholders} ON CONFLICT(feed_id, guid) DO UPDATE SET image_url = excluded.image_url, rev = excluded.rev WHERE articles.image_url IS NULL AND excluded.image_url IS NOT NULL`,
       params
     });
   }
@@ -150,6 +150,7 @@ export async function pollFeeds(env, feeds, now) {
         author: item.author,
         summary: item.summary,
         content: item.content,
+        image_url: item.image_url,
         published_at: item.published_at,
         fetched_at: now
       });

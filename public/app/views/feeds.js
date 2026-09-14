@@ -1,4 +1,4 @@
-import { el, clear, formatTimestamp, plural, openSheet, confirmSheet, toast } from "../dom.js";
+import { el, clear, formatTimestamp, plural, siteIcon, openSheet, confirmSheet, toast } from "../dom.js";
 import {
   feedsSorted,
   foldersSorted,
@@ -129,6 +129,7 @@ function feedRow(feed) {
   const unread = unreadCount(feed.id);
   const broken = state && state.error_count > 0;
   return el("div", { class: "list-item" }, [
+    siteIcon(feed.site_url || feed.feed_url, feed.title),
     el("a", { class: "grow", href: `/feed/${feed.id}`, "data-link": "", style: "text-decoration:none;color:inherit" }, [
       el("div", { text: feed.title }),
       el("div", {

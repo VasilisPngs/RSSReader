@@ -82,6 +82,24 @@ export function hostnameOf(url) {
   }
 }
 
+export function siteIconUrl(source) {
+  try {
+    return `${new URL(source).origin}/favicon.ico`;
+  } catch {
+    return null;
+  }
+}
+
+export function siteIcon(source, label) {
+  const initial = (label || "?").trim().charAt(0).toUpperCase() || "?";
+  const fallback = () => el("span", { class: "site-icon fallback", text: initial });
+  const url = siteIconUrl(source);
+  if (!url) return fallback();
+  const img = el("img", { class: "site-icon", src: url, alt: "", loading: "lazy", referrerPolicy: "no-referrer", decoding: "async" });
+  img.addEventListener("error", () => img.replaceWith(fallback()), { once: true });
+  return img;
+}
+
 export function toast(message) {
   const host = document.getElementById("toast-host");
   const node = el("div", { class: "toast", text: message });

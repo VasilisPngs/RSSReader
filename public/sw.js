@@ -1,4 +1,4 @@
-const VERSION = "v5";
+const VERSION = "v6";
 const CACHE = `rssreader-${VERSION}`;
 
 const SHELL = [
@@ -12,6 +12,7 @@ const SHELL = [
   "/app/router.js",
   "/app/dom.js",
   "/app/i18n.js",
+  "/app/theme.js",
   "/app/sanitize.js",
   "/app/views/articles.js",
   "/app/views/article.js",
