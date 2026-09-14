@@ -1,6 +1,7 @@
-import { TABLE_NAMES, readAll, writeRows, getMeta, pruneArticles } from "./db.js";
+import { TABLE_NAMES, readAll, writeRows, putLocal, getMeta, pruneArticles } from "./db.js";
 import { keepDefaultLanguage } from "./lang.js";
-import { scheduleSync, syncEvents, apiPost } from "./sync.js";
+import { extractReadable } from "./readable.js";
+import { scheduleSync, syncEvents, apiPost, apiPostText } from "./sync.js";
 
 export const RETENTION_DAYS = 45;
 
@@ -292,6 +293,31 @@ export async function importOpml(text) {
 
   if (entries.length > 0) await commit(entries);
   return entries.filter((entry) => entry.table === "feeds").length;
+}
+
+const loadingFull = new Map();
+
+export function loadFullArticle(articleId) {
+  const pending = loadingFull.get(articleId);
+  if (pending) return pending;
+  const task = fetchFullArticle(articleId).finally(() => loadingFull.delete(articleId));
+  loadingFull.set(articleId, task);
+  return task;
+}
+
+async function fetchFullArticle(articleId) {
+  const article = cache.articles.get(articleId);
+  if (!article || !article.url) return null;
+  const page = await apiPostText("/api/page", { id: articleId }, 25000);
+  const content = extractReadable(page.text, page.finalUrl || article.url);
+  if (!content) return null;
+  const row = { ...article, content };
+  cache.articles.set(row.id, row);
+  await putLocal([{ table: "articles", row }]);
+  reindex();
+  announce();
+  apiPost("/api/readable", { id: articleId, content }).catch(() => {});
+  return content;
 }
 
 export async function lastSyncedAt() {

@@ -1,5 +1,5 @@
 import { el, formatTimestamp, hostnameOf, toast } from "../dom.js";
-import { articleById, feedById, stateOf, setRead, toggleStar } from "../store.js";
+import { articleById, feedById, stateOf, setRead, toggleStar, loadFullArticle } from "../store.js";
 import { sanitizeHtml } from "../sanitize.js";
 import { navigate, back } from "../router.js";
 import { queue } from "./articles.js";
@@ -13,6 +13,15 @@ export function siblings(articleId) {
     previous: index > 0 ? ids[index - 1] : null,
     next: index < ids.length - 1 ? ids[index + 1] : null
   };
+}
+
+const SUMMARY_LIMIT = 1200;
+
+function needsFullText(article) {
+  const content = article.content || "";
+  if (!content) return true;
+  const text = content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return text.length <= SUMMARY_LIMIT && text.length <= (article.summary || "").length + 40;
 }
 
 export function renderArticle(container, params) {
@@ -79,6 +88,19 @@ export function renderArticle(container, params) {
   const body = el("div", { class: "reader-body" });
   body.append(sanitizeHtml(article.content || article.summary || ""));
   container.append(body);
+
+  if (article.url && needsFullText(article)) {
+    const notice = el("div", { class: "muted tiny", text: t("loadingFullText") });
+    container.insertBefore(notice, body);
+    loadFullArticle(article.id)
+      .then((content) => {
+        if (content) return;
+        notice.textContent = t("fullTextUnavailable");
+      })
+      .catch(() => {
+        notice.textContent = t("fullTextFailed");
+      });
+  }
 
   container.append(
     el("div", { class: "row between reader-nav" }, [

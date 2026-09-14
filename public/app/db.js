@@ -79,6 +79,14 @@ export async function writeRows(entries) {
   });
 }
 
+export async function putLocal(entries) {
+  if (entries.length === 0) return;
+  const stores = [...new Set(entries.map((entry) => entry.table))];
+  await transact(stores, "readwrite", (tx) => {
+    for (const entry of entries) tx.objectStore(entry.table).put(entry.row);
+  });
+}
+
 export async function applyRemote(changes) {
   const tables = Object.keys(changes).filter((table) => TABLES[table] && changes[table].length > 0);
   if (tables.length === 0) return 0;
@@ -111,7 +119,7 @@ async function dropOutbox(entries) {
 
 export async function listOutbox(limit) {
   const stored = await transact(["outbox"], "readonly", (tx) => promisify(tx.objectStore("outbox").getAll()));
-  const stale = stored.filter((entry) => !TABLES[entry.table]);
+  const stale = stored.filter((entry) => !TABLES[entry.table] || !TABLES[entry.table].writable);
   if (stale.length > 0) await dropOutbox(stale);
   const entries = stored.filter((entry) => Boolean(TABLES[entry.table]));
   const slice = entries.slice(0, limit);

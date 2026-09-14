@@ -66,6 +66,30 @@ export async function apiPost(path, body, timeout = REQUEST_TIMEOUT) {
   return response.json();
 }
 
+export async function apiPostText(path, body, timeout = REQUEST_TIMEOUT) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    redirect: "manual",
+    cache: "no-store",
+    signal: AbortSignal.timeout(timeout)
+  });
+  if (response.type === "opaqueredirect" || response.status === 401 || response.status === 403) {
+    const error = new Error("auth_required");
+    error.code = "auth";
+    setStatus("auth", error);
+    throw error;
+  }
+  if (!response.ok) {
+    const error = new Error(`http_${response.status}`);
+    error.code = "http";
+    error.status = response.status;
+    throw error;
+  }
+  return { text: await response.text(), finalUrl: response.headers.get("x-final-url") || null };
+}
+
 function postSync(body) {
   return apiPost(ENDPOINT, body);
 }

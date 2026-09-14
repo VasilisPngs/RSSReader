@@ -158,8 +158,73 @@ function pushSubject(request) {
   return email ? `mailto:${email}` : `https://${new URL(request.url).hostname}`;
 }
 
+const PAGE_TIMEOUT = 15000;
+const MAX_PAGE_BYTES = 3000000;
+const MAX_READABLE_CHARS = 200000;
+const BROWSER_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+const USER_AGENT = "Mozilla/5.0 (compatible; RSSReader/1.0; personal reader)";
+
+function charsetOf(contentType) {
+  const match = /charset\s*=\s*"?([\w-]+)/i.exec(contentType || "");
+  return match ? match[1] : "utf-8";
+}
+
+async function handlePage(request, env) {
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+  const row = await env.DB.prepare("SELECT url FROM articles WHERE id = ?1").bind(String(payload.id || "")).first();
+  if (!row || !row.url) return json({ error: "unknown_article" }, 404);
+  const target = safeUrl(row.url);
+  if (!target) return json({ error: "invalid_url" }, 400);
+
+  let upstream;
+  try {
+    upstream = await fetch(target.toString(), {
+      headers: { "user-agent": USER_AGENT, accept: BROWSER_ACCEPT, "accept-language": "el,en;q=0.8" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(PAGE_TIMEOUT)
+    });
+  } catch (error) {
+    return json({ error: "unreachable", detail: String(error && error.message).slice(0, 120) }, 502);
+  }
+  if (!upstream.ok) return json({ error: "unreachable", detail: `HTTP ${upstream.status}` }, 502);
+  if (Number(upstream.headers.get("content-length") || 0) > MAX_PAGE_BYTES) return json({ error: "too_large" }, 413);
+
+  return new Response(upstream.body, {
+    headers: {
+      "content-type": `text/plain; charset=${charsetOf(upstream.headers.get("content-type"))}`,
+      "cache-control": "no-store",
+      "x-final-url": upstream.url || target.toString()
+    }
+  });
+}
+
+async function handleReadable(request, env) {
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+  const id = String(payload.id || "");
+  const content = String(payload.content || "").slice(0, MAX_READABLE_CHARS);
+  if (!id || !content) return json({ error: "invalid_payload" }, 400);
+  const bumped = await env.DB.prepare("UPDATE sync_rev SET value = value + 1 WHERE id = 1 RETURNING value").first();
+  const result = await env.DB.prepare("UPDATE articles SET content = ?2, rev = ?3 WHERE id = ?1")
+    .bind(id, content, bumped.value)
+    .run();
+  if (!result.meta || result.meta.changes === 0) return json({ error: "unknown_article" }, 404);
+  return json({ ok: true, rev: bumped.value });
+}
+
 const ROUTES = {
   "/api/sync": handleSync,
+  "/api/page": handlePage,
+  "/api/readable": handleReadable,
   "/api/discover": handleDiscover,
   "/api/refresh": handleRefresh,
   "/api/push/key": handlePushKey,
