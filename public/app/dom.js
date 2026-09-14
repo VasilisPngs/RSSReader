@@ -1,3 +1,5 @@
+import { locale, t, tn } from "./i18n.js";
+
 export function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(props)) {
@@ -36,25 +38,40 @@ export function clear(node) {
   return node;
 }
 
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
-const dayFormat = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" });
-const fullFormat = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
-const relativeFormat = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+const formatters = new Map();
+
+function formatter(kind) {
+  const key = `${locale()}:${kind}`;
+  if (!formatters.has(key)) {
+    const options = {
+      time: { hour: "2-digit", minute: "2-digit" },
+      day: { day: "numeric", month: "short" },
+      full: { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }
+    };
+    formatters.set(
+      key,
+      kind === "relative"
+        ? new Intl.RelativeTimeFormat(locale(), { numeric: "auto" })
+        : new Intl.DateTimeFormat(locale(), options[kind])
+    );
+  }
+  return formatters.get(key);
+}
 
 export function formatTimestamp(value, long = false) {
   if (!value) return "";
   const date = new Date(value);
-  if (long) return fullFormat.format(date);
+  if (long) return formatter("full").format(date);
   const elapsed = Date.now() - value;
-  if (elapsed < 60000) return relativeFormat.format(0, "minute");
-  if (elapsed < 3600000) return relativeFormat.format(-Math.round(elapsed / 60000), "minute");
-  if (elapsed < 86400000) return timeFormat.format(date);
-  if (elapsed < 604800000) return relativeFormat.format(-Math.round(elapsed / 86400000), "day");
-  return dayFormat.format(date);
+  if (elapsed < 60000) return formatter("relative").format(0, "minute");
+  if (elapsed < 3600000) return formatter("relative").format(-Math.round(elapsed / 60000), "minute");
+  if (elapsed < 86400000) return formatter("time").format(date);
+  if (elapsed < 604800000) return formatter("relative").format(-Math.round(elapsed / 86400000), "day");
+  return formatter("day").format(date);
 }
 
-export function plural(count, singular, pluralForm) {
-  return `${count} ${count === 1 ? singular : pluralForm || `${singular}s`}`;
+export function plural(count, key) {
+  return tn(count, key);
 }
 
 export function hostnameOf(url) {
@@ -104,7 +121,7 @@ export function openSheet(build, onClose) {
   return close;
 }
 
-export function confirmSheet(title, message, confirmLabel = "Delete") {
+export function confirmSheet(title, message, confirmLabel) {
   return new Promise((resolve) => {
     let answer = false;
     openSheet(
@@ -112,11 +129,11 @@ export function confirmSheet(title, message, confirmLabel = "Delete") {
         el("h2", { text: title }),
         el("p", { class: "muted", text: message }),
         el("div", { class: "row" }, [
-          el("button", { class: "btn grow", type: "button", text: "Cancel", onclick: close }),
+          el("button", { class: "btn grow", type: "button", text: t("cancel"), onclick: close }),
           el("button", {
             class: "btn primary grow",
             type: "button",
-            text: confirmLabel,
+            text: confirmLabel || t("delete"),
             onclick: () => {
               answer = true;
               close();

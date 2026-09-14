@@ -3,6 +3,7 @@ import { articleById, feedById, stateOf, setRead, toggleStar } from "../store.js
 import { sanitizeHtml } from "../sanitize.js";
 import { navigate, back } from "../router.js";
 import { queue } from "./articles.js";
+import { t } from "../i18n.js";
 
 export function siblings(articleId) {
   const { ids } = queue();
@@ -19,8 +20,8 @@ export function renderArticle(container, params) {
   if (!article) {
     container.append(
       el("div", { class: "empty" }, [
-        el("p", { text: "Article not found. It may have been removed by retention." }),
-        el("a", { class: "btn", href: "/", "data-link": "", text: "Back to list" })
+        el("p", { text: t("articleNotFound") }),
+        el("a", { class: "btn", href: "/", "data-link": "", text: t("backToList") })
       ])
     );
     return;
@@ -33,22 +34,22 @@ export function renderArticle(container, params) {
 
   container.append(
     el("div", { class: "row between reader-bar" }, [
-      el("button", { class: "btn small ghost", type: "button", text: "← Back", onclick: () => back(queue().origin) }),
+      el("button", { class: "btn small ghost", type: "button", text: t("back"), onclick: () => back(queue().origin) }),
       el("div", { class: "row" }, [
         el("button", {
           class: "btn small",
           type: "button",
           "aria-pressed": state.is_starred ? "true" : "false",
-          text: state.is_starred ? "★ Starred" : "☆ Star",
+          text: state.is_starred ? t("starOn") : t("starOff"),
           onclick: () => toggleStar(article.id)
         }),
         el("button", {
           class: "btn small",
           type: "button",
-          text: "Unread",
+          text: t("markUnread"),
           onclick: () => {
             setRead(article.id, false);
-            toast("Marked unread");
+            toast(t("markedUnread"));
           }
         })
       ])
@@ -69,7 +70,7 @@ export function renderArticle(container, params) {
             href: article.url,
             target: "_blank",
             rel: "noopener noreferrer",
-            text: `Open on ${hostnameOf(article.url)} ↗`
+            text: t("openOn", { host: hostnameOf(article.url) })
           })
         : null
     ])
@@ -84,14 +85,14 @@ export function renderArticle(container, params) {
       el("button", {
         class: "btn small",
         type: "button",
-        text: "← Previous",
+        text: t("previous"),
         disabled: !previous,
         onclick: () => previous && navigate(`/article/${previous}`)
       }),
       el("button", {
         class: "btn small",
         type: "button",
-        text: "Next →",
+        text: t("next"),
         disabled: !next,
         onclick: () => next && navigate(`/article/${next}`)
       })

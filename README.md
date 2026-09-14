@@ -1,8 +1,15 @@
 # RSSReader
 
+**English** · [Ελληνικά](#ελληνικά)
+
 Single-user RSS/Atom reader. Cloudflare Worker with static assets, D1 database, a Cron
 Trigger that fetches feeds server-side, offline-first PWA client, Cloudflare Access for
 authentication.
+
+The interface ships in English and Greek. It follows the browser language on first run and
+can be switched any time in Settings → Language; the choice is stored per device. Dates,
+relative times and every label follow the selected language. Article content is shown in
+whatever language the feed publishes — it is never translated.
 
 ## Architecture
 
@@ -145,3 +152,48 @@ npm run dev
 Local requests bypass the Access check by hostname. To exercise the cron handler locally,
 temporarily add `"/__scheduled*"` to `assets.run_worker_first`, then call
 `/__scheduled?cron=*+*+*+*+*`.
+
+---
+
+## Ελληνικά
+
+Προσωπικός αναγνώστης RSS/Atom για έναν χρήστη. Τρέχει σε Cloudflare Worker με static assets
+και βάση D1, με Cron Trigger που κατεβάζει τις ροές από τον server, PWA που δουλεύει offline
+και προστασία από Cloudflare Access. Δεν υπάρχει κώδικας σύνδεσης στην εφαρμογή.
+
+**Γλώσσα:** η διεπαφή είναι στα αγγλικά και στα ελληνικά. Στην πρώτη εκτέλεση ακολουθεί τη
+γλώσσα του browser και αλλάζει από Ρυθμίσεις → Γλώσσα. Οι ημερομηνίες και οι σχετικοί χρόνοι
+ακολουθούν τη γλώσσα. Το περιεχόμενο των άρθρων μένει στη γλώσσα της ροής — δεν μεταφράζεται.
+
+**Γιατί server-side:** ο browser δεν μπορεί να κατεβάσει ροές λόγω CORS. Το κατέβασμα γίνεται
+στον Worker, οπότε το κινητό δεν κάνει καμία δουλειά.
+
+**Πώς γίνεται η λήψη:** ένα cron τρέχει κάθε λεπτό και ανανεώνει μόνο όσες ροές είναι
+ληξιπρόθεσμες, το πολύ 3 ανά εκτέλεση. Κάθε ροή έχει δικό της διάστημα που προσαρμόζεται μόνο
+του: όσες βγάζουν νέα άρθρα πυκνώνουν στα 10 λεπτά, οι ήσυχες αραιώνουν ως τις 3 ώρες, οι
+χαλασμένες κάνουν backoff ως 6 ώρες. Με ETag και If-Modified-Since, μια ροή που δεν άλλαξε
+κοστίζει ένα subrequest και μηδέν parsing.
+
+**Τι κάνεις με τα άρθρα:** διάβασμα, αστέρι, φάκελοι, αναζήτηση (τοπικά, δουλεύει και offline),
+εισαγωγή και εξαγωγή OPML, συντομεύσεις πληκτρολογίου. Η κατάσταση διαβασμένων συγχρονίζεται σε
+όλες τις συσκευές.
+
+**Ασφάλεια:** το HTML των άρθρων καθαρίζεται στον browser με λίστα επιτρεπόμενων στοιχείων και
+attributes — scripts, iframes, event handlers και `javascript:` σύνδεσμοι αφαιρούνται — με CSP
+από πάνω.
+
+**Εγκατάσταση:**
+
+```sh
+npm install
+npx wrangler login
+npx wrangler d1 create rssreader     # βάλε το database_id στο wrangler.jsonc
+npm run db:migrate:remote
+npm run deploy
+```
+
+**Cloudflare Access (υποχρεωτικό):** Workers & Pages → `rssreader` → καρτέλα Access →
+Protect this Worker behind Access → All traffic → πολιτική Google μόνο για το email σου →
+διάρκεια συνεδρίας έως έναν μήνα. Χωρίς αυτό τα API απαντούν 403 σε όλους.
+
+**Διατήρηση:** άρθρα παλαιότερα από 45 ημέρες διαγράφονται αυτόματα, εκτός αν έχουν αστέρι.

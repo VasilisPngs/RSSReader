@@ -2,16 +2,17 @@ import { el, formatTimestamp, plural, toast } from "../dom.js";
 import { readAll, TABLE_NAMES } from "../db.js";
 import { RETENTION_DAYS, feedsSorted, unreadTotal, starredCount, lastSyncedAt } from "../store.js";
 import { getSyncState, requestSync } from "../sync.js";
+import { t, language, languages, setLanguage } from "../i18n.js";
 
 const SHORTCUTS = [
-  ["j / ↓", "next article"],
-  ["k / ↑", "previous article"],
-  ["Enter / o", "open selected"],
-  ["m", "toggle read"],
-  ["s", "toggle star"],
-  ["r", "refresh feeds"],
-  ["/", "focus search"],
-  ["Esc", "back to list"]
+  ["j / ↓", "keyNext"],
+  ["k / ↑", "keyPrevious"],
+  ["Enter / o", "keyOpen"],
+  ["m", "keyToggleRead"],
+  ["s", "keyToggleStar"],
+  ["r", "keyRefresh"],
+  ["/", "keySearch"],
+  ["Esc", "keyBack"]
 ];
 
 async function exportBackup() {
@@ -24,65 +25,82 @@ async function exportBackup() {
   anchor.click();
   anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast("Backup exported");
+  toast(t("backupExported"));
 }
 
 export function renderSettings(container) {
   const state = getSyncState();
-  const storage = el("div", { class: "tiny", text: "Measuring storage…" });
+  const storage = el("div", { class: "tiny", text: t("measuringStorage") });
 
   if (navigator.storage && navigator.storage.estimate) {
     navigator.storage.estimate().then((estimate) => {
       const used = Math.round((estimate.usage || 0) / 1048576);
-      storage.textContent = `${used} MB cached on this device`;
+      storage.textContent = t("storageUsed", { size: used });
     });
   } else {
-    storage.textContent = "Storage estimate unavailable";
+    storage.textContent = t("storageUnavailable");
   }
 
-  container.append(el("h1", { text: "Settings" }));
+  container.append(el("h1", { text: t("settingsTitle") }));
 
   const syncCard = el("div", { class: "card" }, [
-    el("h2", { text: "Sync" }),
-    el("div", { class: "tiny", text: `Status: ${state.status}${state.pending ? ` · ${plural(state.pending, "change")} queued` : ""}` }),
-    el("div", { class: "tiny", id: "last-sync", text: "Last sync: unknown" }),
+    el("h2", { text: t("sync") }),
+    el("div", {
+      class: "tiny",
+      text: `${t("syncStatus", { status: t(`status${state.status[0].toUpperCase()}${state.status.slice(1)}`) })}${
+        state.pending ? ` · ${t("queuedChanges", { count: plural(state.pending, "change") })}` : ""
+      }`
+    }),
+    el("div", { class: "tiny", id: "last-sync", text: t("lastSync", { value: t("unknown") }) }),
     storage,
-    el("button", { class: "btn block", type: "button", text: "Sync now", onclick: () => requestSync() })
+    el("label", { class: "tiny", text: t("language") }),
+    el(
+      "select",
+      {
+        onchange: (event) => {
+          const next = event.target.value;
+          event.target.blur();
+          setLanguage(next);
+        }
+      },
+      languages().map((code) => el("option", { value: code, text: code === "el" ? "Ελληνικά" : "English", selected: code === language() }))
+    ),
+    el("button", { class: "btn block", type: "button", text: t("syncNow"), onclick: () => requestSync() })
   ]);
   container.append(syncCard);
   lastSyncedAt().then((value) => {
     const node = syncCard.querySelector("#last-sync");
-    if (node) node.textContent = value ? `Last sync: ${formatTimestamp(value, true)}` : "Last sync: never";
+    if (node) node.textContent = t("lastSync", { value: value ? formatTimestamp(value, true) : t("never") });
   });
 
   container.append(
     el("div", { class: "card" }, [
-      el("h2", { text: "Library" }),
-      el("div", { class: "tiny", text: `${plural(feedsSorted().length, "feed")} · ${unreadTotal()} unread · ${starredCount()} starred` }),
+      el("h2", { text: t("library") }),
       el("div", {
         class: "tiny",
-        text: `Articles older than ${RETENTION_DAYS} days are removed automatically unless starred.`
+        text: t("librarySummary", { feeds: plural(feedsSorted().length, "feed"), unread: unreadTotal(), starred: starredCount() })
       }),
-      el("button", { class: "btn block", type: "button", text: "Export backup (JSON)", onclick: exportBackup })
+      el("div", {
+        class: "tiny",
+        text: t("retentionNote", { days: RETENTION_DAYS })
+      }),
+      el("button", { class: "btn block", type: "button", text: t("exportBackup"), onclick: exportBackup })
     ])
   );
 
   container.append(
     el("div", { class: "card" }, [
-      el("h2", { text: "Keyboard" }),
+      el("h2", { text: t("keyboard") }),
       ...SHORTCUTS.map(([keys, description]) =>
-        el("div", { class: "row between tiny" }, [el("kbd", { text: keys }), el("span", { text: description })])
+        el("div", { class: "row between tiny" }, [el("kbd", { text: keys }), el("span", { text: t(description) })])
       )
     ])
   );
 
   container.append(
     el("div", { class: "card" }, [
-      el("h2", { text: "How fetching works" }),
-      el("div", {
-        class: "tiny",
-        text: "A cron trigger runs every minute and refreshes the few feeds that are due, using ETag and If-Modified-Since so unchanged feeds cost nothing. Feeds that publish often are checked more frequently; quiet or broken ones back off automatically."
-      })
+      el("h2", { text: t("howFetchingWorks") }),
+      el("div", { class: "tiny", text: t("howFetchingBody") })
     ])
   );
 }

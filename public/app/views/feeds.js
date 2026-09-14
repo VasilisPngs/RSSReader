@@ -17,6 +17,7 @@ import {
   buildOpml
 } from "../store.js";
 import { requestSync } from "../sync.js";
+import { t } from "../i18n.js";
 
 function openAddFeed() {
   let url = "";
@@ -26,13 +27,13 @@ function openAddFeed() {
 
   const runDiscover = async (close) => {
     if (!url.trim()) return;
-    status.textContent = "Looking for a feed…";
+    status.textContent = t("lookingForFeed");
     clear(result);
     try {
       discovered = await discoverFeed(url);
       status.textContent = "";
       if (knownFeedUrl(discovered.feed_url)) {
-        status.textContent = "That feed is already in your list.";
+        status.textContent = t("feedAlreadyAdded");
         return;
       }
       result.append(
@@ -44,7 +45,7 @@ function openAddFeed() {
           el("button", {
             class: "btn small primary",
             type: "button",
-            text: "Add",
+            text: t("add"),
             onclick: async (event) => {
               const button = event.currentTarget;
               button.disabled = true;
@@ -56,7 +57,7 @@ function openAddFeed() {
                 await requestSync();
               } catch {}
               close();
-              toast(`${discovered.title} added`);
+              toast(t("feedAdded", { title: discovered.title }));
             }
           })
         ])
@@ -64,18 +65,18 @@ function openAddFeed() {
     } catch (error) {
       status.textContent =
         error.message === "no_feed_found"
-          ? "No RSS or Atom feed found at that address."
+          ? t("noFeedFound")
           : error.message === "unreachable"
-            ? "Could not reach that address."
-            : "Discovery failed.";
+            ? t("unreachable")
+            : t("discoveryFailed");
     }
   };
 
   openSheet((close) => [
-    el("h2", { text: "Add feed" }),
+    el("h2", { text: t("addFeed") }),
     el("input", {
       type: "url",
-      placeholder: "https://example.com or feed URL",
+      placeholder: t("feedUrlPlaceholder"),
       oninput: (event) => {
         url = event.target.value;
       },
@@ -83,7 +84,7 @@ function openAddFeed() {
         if (event.key === "Enter") runDiscover(close);
       }
     }),
-    el("button", { class: "btn primary block", type: "button", text: "Find feed", onclick: () => runDiscover(close) }),
+    el("button", { class: "btn primary block", type: "button", text: t("findFeed"), onclick: () => runDiscover(close) }),
     status,
     result
   ]);
@@ -94,7 +95,7 @@ function openFeedMenu(feed) {
   openSheet((close) => [
     el("h2", { text: feed.title }),
     el("div", { class: "tiny", text: feed.feed_url }),
-    state && state.last_error ? el("div", { class: "banner", text: `Last error: ${state.last_error}` }) : null,
+    state && state.last_error ? el("div", { class: "banner", text: t("lastError", { message: state.last_error }) }) : null,
     el("input", {
       type: "text",
       value: feed.title,
@@ -104,7 +105,7 @@ function openFeedMenu(feed) {
       "select",
       { onchange: (event) => updateFeed(feed.id, { folder_id: event.target.value || null }) },
       [
-        el("option", { value: "", text: "No folder", selected: !feed.folder_id }),
+        el("option", { value: "", text: t("noFolder"), selected: !feed.folder_id }),
         ...foldersSorted().map((folder) =>
           el("option", { value: folder.id, text: folder.name, selected: folder.id === feed.folder_id })
         )
@@ -113,10 +114,10 @@ function openFeedMenu(feed) {
     el("button", {
       class: "btn block danger",
       type: "button",
-      text: "Delete feed",
+      text: t("deleteFeed"),
       onclick: async () => {
         close();
-        const confirmed = await confirmSheet("Delete feed", `Remove ${feed.title}? Its articles disappear from the list.`, "Delete");
+        const confirmed = await confirmSheet(t("deleteFeed"), t("deleteFeedBody", { title: feed.title }), t("delete"));
         if (confirmed) await deleteFeed(feed.id);
       }
     })
@@ -132,12 +133,12 @@ function feedRow(feed) {
       el("div", { text: feed.title }),
       el("div", {
         class: "tiny",
-        text: state && state.last_fetch_at ? `checked ${formatTimestamp(state.last_fetch_at)}` : "not fetched yet"
+        text: state && state.last_fetch_at ? t("checkedAt", { time: formatTimestamp(state.last_fetch_at) }) : t("notFetchedYet")
       })
     ]),
-    broken ? el("span", { class: "badge danger", text: "error" }) : null,
+    broken ? el("span", { class: "badge danger", text: t("feedError") }) : null,
     unread > 0 ? el("span", { class: "badge", text: String(unread) }) : null,
-    el("button", { class: "icon-button", type: "button", text: "···", "aria-label": "feed options", onclick: () => openFeedMenu(feed) })
+    el("button", { class: "icon-button", type: "button", text: "···", "aria-label": t("ariaFeedOptions"), onclick: () => openFeedMenu(feed) })
   ]);
 }
 
@@ -146,7 +147,7 @@ async function handleImport(event) {
   if (!file) return;
   const text = await file.text();
   const added = await importOpml(text);
-  toast(added > 0 ? `${plural(added, "feed")} imported` : "No new feeds in that file");
+  toast(added > 0 ? t("feedsImported", { count: plural(added, "feed") }) : t("noNewFeedsInFile"));
 }
 
 function exportOpml() {
@@ -165,15 +166,15 @@ export function renderFeeds(container) {
   container.append(
     el("div", { class: "row between" }, [
       el("div", { class: "grow" }, [
-        el("h1", { text: "Feeds" }),
+        el("h1", { text: t("feedsTitle") }),
         el("div", { class: "tiny", text: plural(all.length, "subscription") })
       ]),
-      el("button", { class: "btn small primary", type: "button", text: "+ Add", onclick: openAddFeed })
+      el("button", { class: "btn small primary", type: "button", text: t("addShort"), onclick: openAddFeed })
     ])
   );
 
   if (all.length === 0) {
-    container.append(el("div", { class: "empty", text: "No subscriptions yet. Add a site address and the server finds its feed." }));
+    container.append(el("div", { class: "empty", text: t("noSubscriptions") }));
   }
 
   for (const folder of foldersSorted()) {
@@ -185,7 +186,7 @@ export function renderFeeds(container) {
           class: "icon-button",
           type: "button",
           text: "···",
-          "aria-label": "folder options",
+          "aria-label": t("ariaFolderOptions"),
           onclick: () =>
             openSheet((close) => [
               el("h2", { text: folder.name }),
@@ -197,10 +198,10 @@ export function renderFeeds(container) {
               el("button", {
                 class: "btn block danger",
                 type: "button",
-                text: "Delete folder",
+                text: t("deleteFolder"),
                 onclick: async () => {
                   close();
-                  const confirmed = await confirmSheet("Delete folder", "Feeds inside move out of the folder.", "Delete");
+                  const confirmed = await confirmSheet(t("deleteFolder"), t("deleteFolderBody"), t("delete"));
                   if (confirmed) await deleteFolder(folder.id);
                 }
               })
@@ -209,14 +210,14 @@ export function renderFeeds(container) {
       ])
     );
     const list = el("div", { class: "list" });
-    if (inFolder.length === 0) list.append(el("div", { class: "empty", text: "Empty folder" }));
+    if (inFolder.length === 0) list.append(el("div", { class: "empty", text: t("emptyFolder") }));
     for (const feed of inFolder) list.append(feedRow(feed));
     container.append(list);
   }
 
   const loose = all.filter((feed) => !feed.folder_id);
   if (loose.length > 0) {
-    if (foldersSorted().length > 0) container.append(el("h2", { text: "Ungrouped", style: "margin-top:6px" }));
+    if (foldersSorted().length > 0) container.append(el("h2", { text: t("ungrouped"), style: "margin-top:6px" }));
     const list = el("div", { class: "list" });
     for (const feed of loose) list.append(feedRow(feed));
     container.append(list);
@@ -225,22 +226,22 @@ export function renderFeeds(container) {
   const fileInput = el("input", { type: "file", accept: ".opml,.xml,text/xml", style: "display:none", onchange: handleImport });
   container.append(
     el("div", { class: "card" }, [
-      el("h2", { text: "Organise" }),
+      el("h2", { text: t("organise") }),
       el("button", {
         class: "btn block",
         type: "button",
-        text: "New folder",
+        text: t("newFolder"),
         onclick: () => {
           let name = "";
           openSheet((close) => [
-            el("h2", { text: "New folder" }),
-            el("input", { type: "text", placeholder: "Folder name", oninput: (event) => (name = event.target.value) }),
+            el("h2", { text: t("newFolder") }),
+            el("input", { type: "text", placeholder: t("folderNamePlaceholder"), oninput: (event) => (name = event.target.value) }),
             el("button", {
               class: "btn primary block",
               type: "button",
-              text: "Create",
+              text: t("create"),
               onclick: async () => {
-                if (!name.trim()) return toast("Name is required");
+                if (!name.trim()) return toast(t("nameRequired"));
                 await createFolder(name.trim());
                 close();
               }
@@ -249,8 +250,8 @@ export function renderFeeds(container) {
         }
       }),
       el("div", { class: "row" }, [
-        el("button", { class: "btn grow", type: "button", text: "Import OPML", onclick: () => fileInput.click() }),
-        el("button", { class: "btn grow", type: "button", text: "Export OPML", onclick: exportOpml })
+        el("button", { class: "btn grow", type: "button", text: t("importOpml"), onclick: () => fileInput.click() }),
+        el("button", { class: "btn grow", type: "button", text: t("exportOpml"), onclick: exportOpml })
       ]),
       fileInput
     ])

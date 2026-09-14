@@ -14,6 +14,7 @@ import {
 } from "../store.js";
 import { navigate } from "../router.js";
 import { requestSync } from "../sync.js";
+import { t } from "../i18n.js";
 
 const PAGE_SIZE = 40;
 
@@ -38,15 +39,15 @@ export function listFor(params) {
 function scopeTitle(params) {
   if (params.scope === "feed") {
     const feed = feedById(params.id);
-    return feed ? feed.title : "Feed";
+    return feed ? feed.title : t("feedFallback");
   }
   if (params.scope === "folder") {
     const folder = folderById(params.id);
-    return folder ? folder.name : "Folder";
+    return folder ? folder.name : t("folderFallback");
   }
-  if (params.scope === "starred") return "Starred";
-  if (params.scope === "all") return "All articles";
-  return "Unread";
+  if (params.scope === "starred") return t("scopeStarred");
+  if (params.scope === "all") return t("scopeAllArticles");
+  return t("scopeUnread");
 }
 
 function articleRow(article, params) {
@@ -74,14 +75,14 @@ function articleRow(article, params) {
         class: "icon-button",
         type: "button",
         "aria-pressed": state.is_starred ? "true" : "false",
-        "aria-label": "star",
+        "aria-label": t("ariaStar"),
         text: state.is_starred ? "★" : "☆",
         onclick: () => toggleStar(article.id)
       }),
       el("button", {
         class: "icon-button",
         type: "button",
-        "aria-label": state.is_read ? "mark unread" : "mark read",
+        "aria-label": state.is_read ? t("ariaMarkUnread") : t("ariaMarkRead"),
         text: state.is_read ? "○" : "●",
         onclick: () => setRead(article.id, !state.is_read)
       })
@@ -108,14 +109,14 @@ export function renderArticles(container, params) {
           class: "tiny",
           text:
             params.scope === "starred"
-              ? plural(starredCount(), "starred article")
-              : `${plural(articles.length, "article")} · ${unreadTotal()} unread total`
+              ? plural(starredCount(), "starredArticle")
+              : `${plural(articles.length, "article")} · ${t("unreadTotal", { count: unreadTotal() })}`
         })
       ]),
       el("button", {
         class: "btn small",
         type: "button",
-        text: "Refresh",
+        text: t("refresh"),
         onclick: async (event) => {
           const button = event.currentTarget;
           button.disabled = true;
@@ -123,12 +124,12 @@ export function renderArticles(container, params) {
           try {
             const outcome = await refreshFeeds(params.scope === "feed" ? params.id : null);
             await requestSync();
-            toast(outcome.inserted > 0 ? `${plural(outcome.inserted, "new article")}` : "No new articles");
+            toast(outcome.inserted > 0 ? plural(outcome.inserted, "newArticle") : t("noNewArticles"));
           } catch (error) {
-            toast(error.code === "auth" ? "Sign in required" : "Refresh failed");
+            toast(error.code === "auth" ? t("signInRequired") : t("refreshFailed"));
           } finally {
             button.disabled = false;
-            button.textContent = "Refresh";
+            button.textContent = t("refresh");
           }
         }
       })
@@ -137,9 +138,9 @@ export function renderArticles(container, params) {
 
   container.append(
     el("div", { class: "chips" }, [
-      chip("Unread", "/", params.scope === "unread"),
-      chip("All", "/all", params.scope === "all"),
-      chip("Starred", "/starred", params.scope === "starred"),
+      chip(t("scopeUnread"), "/", params.scope === "unread"),
+      chip(t("scopeAll"), "/all", params.scope === "all"),
+      chip(t("scopeStarred"), "/starred", params.scope === "starred"),
       params.scope === "feed" || params.scope === "folder" ? chip(title, location.pathname, true) : null
     ])
   );
@@ -148,7 +149,7 @@ export function renderArticles(container, params) {
     el("input", {
       type: "search",
       id: "article-search",
-      placeholder: "Search titles and summaries",
+      placeholder: t("searchArticles"),
       value: searchQuery,
       oninput: (event) => {
         searchQuery = event.target.value;
@@ -167,12 +168,14 @@ export function renderArticles(container, params) {
       el("button", {
         class: "btn block",
         type: "button",
-        text: `Mark ${articles.length > visibleCount ? "all listed" : "all"} as read`,
+        text: articles.length > visibleCount ? t("markListedRead") : t("markAllRead"),
         onclick: async () => {
-          const confirmed = articles.length < 20 || (await confirmSheet("Mark as read", `Mark ${plural(articles.length, "article")} as read?`, "Mark read"));
+          const confirmed =
+            articles.length < 20 ||
+            (await confirmSheet(t("markAsRead"), t("markConfirm", { count: plural(articles.length, "article") }), t("markAsRead")));
           if (!confirmed) return;
           const count = await markAllRead(articles);
-          toast(`${plural(count, "article")} marked read`);
+          toast(t("markedRead", { count: plural(count, "article") }));
         }
       })
     );
@@ -194,14 +197,14 @@ function paintList(list, articles, params) {
   if (feeds().length === 0) {
     list.append(
       el("div", { class: "empty" }, [
-        el("p", { text: "No feeds yet." }),
-        el("a", { class: "btn primary", href: "/feeds", "data-link": "", text: "Add your first feed" })
+        el("p", { text: t("noFeedsYet") }),
+        el("a", { class: "btn primary", href: "/feeds", "data-link": "", text: t("addFirstFeed") })
       ])
     );
     return;
   }
   if (articles.length === 0) {
-    list.append(el("div", { class: "empty", text: searchQuery ? "Nothing matches that search." : "Nothing here. You are all caught up." }));
+    list.append(el("div", { class: "empty", text: searchQuery ? t("noSearchMatch") : t("allCaughtUp") }));
     return;
   }
   for (const article of articles.slice(0, visibleCount)) list.append(articleRow(article, params));
@@ -210,7 +213,7 @@ function paintList(list, articles, params) {
       el("button", {
         class: "btn block",
         type: "button",
-        text: `Show more (${articles.length - visibleCount} left)`,
+        text: t("showMore", { count: articles.length - visibleCount }),
         onclick: (event) => {
           visibleCount += PAGE_SIZE;
           const container = event.currentTarget.parentElement;
