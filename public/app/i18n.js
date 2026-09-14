@@ -120,6 +120,7 @@ const STRINGS = {
   themeSystem: ["System", "Σύστημα"],
   themeLight: ["Light", "Φωτεινό"],
   themeDark: ["Dark", "Σκοτεινό"],
+  themeAmoled: ["AMOLED", "AMOLED"],
   notifications: ["Notifications", "Ειδοποιήσεις"],
   notificationsHint: [
     "Turn this on once per device, then choose which feeds may notify you from each feed's options.",
