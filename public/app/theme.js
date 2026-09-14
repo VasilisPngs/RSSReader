@@ -24,6 +24,7 @@ export function applyTheme() {
   const root = document.documentElement;
   if (current === "system") root.removeAttribute("data-theme");
   else root.dataset.theme = current;
+  for (const stale of document.head.querySelectorAll('meta[name="theme-color"][media]')) stale.remove();
   let meta = document.head.querySelector('meta[name="theme-color"]');
   if (!meta) {
     meta = document.createElement("meta");
