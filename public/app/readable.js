@@ -2,13 +2,17 @@ const DROP_SELECTOR =
   "script,style,noscript,svg,form,button,select,textarea,input,nav,aside,footer,header,ins,template,dialog,label,link,meta,object,embed,noembed";
 
 const JUNK =
-  /(share|social|related|recommend|read-?more|more-?from|comment|disqus|newsletter|subscribe|sign-?up|promo|advert|sponsor|banner|breadcrumb|pagination|tag-?list|author-?box|sidebar|widget|cookie|consent|paywall|toolbar|popup|modal|overlay|lightbox|outbrain|taboola|byline|skip-?link)/i;
+  /(share|social|related|recommend|read-?more|more-?from|comment|disqus|newsletter|subscribe|sign-?up|promo|advert|sponsor|banner|breadcrumb|pagination|tag-?list|author-?box|sidebar|widget|cookie|consent|paywall|toolbar|popup|modal|overlay|lightbox|outbrain|taboola|byline|skip-?link|avatar|gravatar|headshot|contributor|rounded-full)/i;
 
 const EMBED = /(twitter-tweet|instagram-media|tiktok-embed|fb-post|reddit-embed|bluesky-embed)/i;
 
 const WIDGET_ATTRIBUTES = ["x-data", "x-show", "x-init", "wire:id", "wire:model", "onclick", "v-if", "v-for", "data-controller"];
 
 const PLACEHOLDER = /^data:image\/(gif|png|svg\+xml);/i;
+
+const PORTRAIT_PATH = /\/(avatars?|profiles?|authors?|users?|members?)\//i;
+
+export const READABLE_MARKER = "<!--readable:2-->";
 
 const BLOCKS = new Set([
   "P",
@@ -66,6 +70,7 @@ function isDecorative(node) {
   if (node.tagName !== "IMG") return false;
   const src = node.getAttribute("src") || "";
   if (!node.getAttribute("srcset") && PLACEHOLDER.test(src) && src.length < 400) return true;
+  if (PORTRAIT_PATH.test(src) || /gravatar\.com/i.test(src)) return true;
   const width = Number(node.getAttribute("width") || 0);
   const height = Number(node.getAttribute("height") || 0);
   return (width > 0 && width <= 64) || (height > 0 && height <= 64);
@@ -184,6 +189,16 @@ function collect(container, output) {
 
 function trim(output) {
   for (const image of output.querySelectorAll("img")) if (isDecorative(image)) image.remove();
+  const seen = new Set();
+  for (const image of output.querySelectorAll("img")) {
+    const key = image.getAttribute("src") || "";
+    if (!key) continue;
+    if (seen.has(key)) image.remove();
+    else seen.add(key);
+  }
+  for (const figure of output.querySelectorAll("figure")) {
+    if (!figure.querySelector("img, picture, video, audio, iframe")) figure.remove();
+  }
   for (const node of output.querySelectorAll("p, div, span")) {
     if (node.children.length === 0 && node.textContent.trim().length === 0) node.remove();
   }
@@ -212,5 +227,5 @@ export function extractReadable(html, baseUrl) {
   absolutize(output, baseUrl);
   const text = output.textContent.replace(/\s+/g, " ").trim();
   if (text.length < 200) return "";
-  return output.innerHTML;
+  return READABLE_MARKER + output.innerHTML;
 }

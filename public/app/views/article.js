@@ -1,6 +1,7 @@
 import { el, formatTimestamp, hostnameOf, toast } from "../dom.js";
 import { articleById, feedById, stateOf, setRead, toggleStar, loadFullArticle } from "../store.js";
 import { sanitizeHtml } from "../sanitize.js";
+import { READABLE_MARKER } from "../readable.js";
 import { navigate, back } from "../router.js";
 import { queue } from "./articles.js";
 import { t } from "../i18n.js";
@@ -16,10 +17,12 @@ export function siblings(articleId) {
 }
 
 const SUMMARY_LIMIT = 1200;
+const OLD_MARKER = /<!--readable:\d+-->/;
 
 function needsFullText(article) {
   const content = article.content || "";
   if (!content) return true;
+  if (OLD_MARKER.test(content)) return !content.startsWith(READABLE_MARKER);
   const text = content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
   return text.length <= SUMMARY_LIMIT && text.length <= (article.summary || "").length + 40;
 }

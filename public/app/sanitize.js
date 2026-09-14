@@ -142,7 +142,7 @@ function cardFrame(owner, embed) {
 function markLive(node, source) {
   node.setAttribute("src", source);
   node.setAttribute("loading", "lazy");
-  node.setAttribute("referrerpolicy", "no-referrer");
+  node.setAttribute("referrerpolicy", node.tagName === "IFRAME" ? "strict-origin-when-cross-origin" : "no-referrer");
 }
 
 function scrub(node) {
