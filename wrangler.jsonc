@@ -14,7 +14,7 @@
     {
       "binding": "DB",
       "database_name": "rssreader",
-      "database_id": "REPLACE_WITH_DATABASE_ID",
+      "database_id": "92a18373-fca5-4651-aee2-2f4aad479398",
       "migrations_dir": "migrations"
     }
   ],
