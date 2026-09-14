@@ -1,3 +1,5 @@
+import { keepFeedLanguage } from "../public/app/lang.js";
+
 const NAMED_ENTITIES = {
   amp: "&",
   lt: "<",
@@ -102,6 +104,13 @@ function attribute(head, name) {
   return decodeText(match[2] !== undefined ? match[2] : match[3]);
 }
 
+function orphanLinkText(block, from) {
+  const close = block.indexOf("</link", from);
+  if (close === -1) return "";
+  const text = block.slice(from, close).trim();
+  return /^https?:\/\/\S+$/i.test(text) ? decodeText(text) : "";
+}
+
 function linkOf(block) {
   let cursor = 0;
   let fallback = "";
@@ -113,7 +122,11 @@ function linkOf(block) {
     if (inner && !inner.startsWith("<")) return decodeText(inner);
     const rel = attribute(tag.head, "rel");
     const href = attribute(tag.head, "href");
-    if (!href) continue;
+    if (!href) {
+      const orphan = orphanLinkText(block, tag.end);
+      if (orphan) return orphan;
+      continue;
+    }
     if (rel === "" || rel === "alternate") return href;
     if (!fallback && rel !== "self" && rel !== "hub") fallback = href;
   }
@@ -156,12 +169,13 @@ export function parseFeed(xml, options = {}) {
     const url = linkOf(body);
     const guid = textOf(tagText(body, ["guid", "id"])) || url || title;
     if (!guid) continue;
+    const link = url || (/^https?:\/\//i.test(guid) ? guid : null);
     const rawSummary = tagText(body, ["description", "summary"]);
     const rawContent = tagText(body, ["content:encoded", "content", "description", "summary"]);
     const content = stripUnsafe(decodeText(rawContent)).slice(0, MAX_CONTENT);
     items.push({
       guid,
-      url: url || null,
+      url: link,
       title: title || "(untitled)",
       author: textOf(tagText(body, ["dc:creator", "author"])).slice(0, 120) || null,
       summary: plainText(rawSummary || rawContent).slice(0, MAX_SUMMARY) || null,
@@ -171,10 +185,13 @@ export function parseFeed(xml, options = {}) {
     });
   }
 
+  const language = textOf(tagText(header, ["language", "dc:language"])) || attribute(header, "xml:lang");
+
   return {
     title: textOf(tagText(header, ["title"])),
     siteUrl: linkOf(header) || null,
-    items
+    language: language || null,
+    items: keepFeedLanguage(items, language)
   };
 }
 

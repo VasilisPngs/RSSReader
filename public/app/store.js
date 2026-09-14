@@ -1,4 +1,5 @@
 import { TABLE_NAMES, readAll, writeRows, getMeta, pruneArticles } from "./db.js";
+import { keepDefaultLanguage } from "./lang.js";
 import { scheduleSync, syncEvents, apiPost } from "./sync.js";
 
 export const RETENTION_DAYS = 45;
@@ -34,9 +35,9 @@ async function commit(entries) {
 
 function reindex() {
   const live = new Set([...cache.feeds.values()].filter((feed) => !feed.deleted_at).map((feed) => feed.id));
-  ordered = [...cache.articles.values()]
-    .filter((article) => live.has(article.feed_id))
-    .sort((a, b) => b.published_at - a.published_at);
+  ordered = keepDefaultLanguage([...cache.articles.values()].filter((article) => live.has(article.feed_id))).sort(
+    (a, b) => b.published_at - a.published_at
+  );
   unreadByFeed = new Map();
   totalUnread = 0;
   for (const article of ordered) {
