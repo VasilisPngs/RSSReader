@@ -4,17 +4,7 @@ import { RETENTION_DAYS, feedsSorted, unreadTotal, starredCount, lastSyncedAt } 
 import { getSyncState, requestSync } from "../sync.js";
 import { t, language, languages, setLanguage } from "../i18n.js";
 import { themeMode, themeModes, setTheme } from "../theme.js";
-
-const SHORTCUTS = [
-  ["j / ↓", "keyNext"],
-  ["k / ↑", "keyPrevious"],
-  ["Enter / o", "keyOpen"],
-  ["m", "keyToggleRead"],
-  ["s", "keyToggleStar"],
-  ["r", "keyRefresh"],
-  ["/", "keySearch"],
-  ["Esc", "keyBack"]
-];
+import { cardImage, cardImages, setCardImage } from "../prefs.js";
 
 async function exportBackup() {
   const data = {};
@@ -72,6 +62,24 @@ export function renderSettings(container) {
         })
       )
     ),
+    el("label", { class: "tiny", text: t("cardImage") }),
+    el(
+      "select",
+      {
+        onchange: (event) => {
+          const next = event.target.value;
+          event.target.blur();
+          setCardImage(next);
+        }
+      },
+      cardImages().map((size) =>
+        el("option", {
+          value: size,
+          text: t(`image${size[0].toUpperCase()}${size.slice(1)}`),
+          selected: size === cardImage()
+        })
+      )
+    ),
     el("label", { class: "tiny", text: t("language") }),
     el(
       "select",
@@ -104,22 +112,6 @@ export function renderSettings(container) {
         text: t("retentionNote", { days: RETENTION_DAYS })
       }),
       el("button", { class: "btn block", type: "button", text: t("exportBackup"), onclick: exportBackup })
-    ])
-  );
-
-  container.append(
-    el("div", { class: "card" }, [
-      el("h2", { text: t("keyboard") }),
-      ...SHORTCUTS.map(([keys, description]) =>
-        el("div", { class: "row between tiny" }, [el("kbd", { text: keys }), el("span", { text: t(description) })])
-      )
-    ])
-  );
-
-  container.append(
-    el("div", { class: "card" }, [
-      el("h2", { text: t("howFetchingWorks") }),
-      el("div", { class: "tiny", text: t("howFetchingBody") })
     ])
   );
 }

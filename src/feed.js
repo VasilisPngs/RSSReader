@@ -55,8 +55,8 @@ export function plainText(input) {
 export function stripUnsafe(input) {
   if (!input) return "";
   return input
-    .replace(/<(script|style|iframe|object|embed)\b[\s\S]*?<\/\1>/gi, "")
-    .replace(/<(script|style|iframe|object|embed)\b[^>]*\/?>/gi, "");
+    .replace(/<(script|style|object|embed)\b[\s\S]*?<\/\1>/gi, "")
+    .replace(/<(script|style|object|embed)\b[^>]*\/?>/gi, "");
 }
 
 function findTag(source, name, from = 0) {

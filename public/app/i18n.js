@@ -112,6 +112,10 @@ const STRINGS = {
   settingsTitle: ["Settings", "Ρυθμίσεις"],
   language: ["Language", "Γλώσσα"],
   theme: ["Theme", "Θέμα"],
+  cardImage: ["Article image", "Εικόνα άρθρου"],
+  imageSmall: ["Small", "Μικρή"],
+  imageLarge: ["Large", "Μεγάλη"],
+  imageNone: ["Hidden", "Καμία"],
   themeSystem: ["System", "Σύστημα"],
   themeLight: ["Light", "Φωτεινό"],
   themeDark: ["Dark", "Σκοτεινό"],
@@ -136,20 +140,6 @@ const STRINGS = {
   ],
   exportBackup: ["Export backup (JSON)", "Εξαγωγή αντιγράφου (JSON)"],
   backupExported: ["Backup exported", "Το αντίγραφο εξήχθη"],
-  keyboard: ["Keyboard", "Πληκτρολόγιο"],
-  keyNext: ["next article", "επόμενο άρθρο"],
-  keyPrevious: ["previous article", "προηγούμενο άρθρο"],
-  keyOpen: ["open selected", "άνοιγμα επιλεγμένου"],
-  keyToggleRead: ["toggle read", "εναλλαγή διαβασμένου"],
-  keyToggleStar: ["toggle star", "εναλλαγή αστεριού"],
-  keyRefresh: ["refresh feeds", "ανανέωση ροών"],
-  keySearch: ["focus search", "εστίαση στην αναζήτηση"],
-  keyBack: ["back to list", "πίσω στη λίστα"],
-  howFetchingWorks: ["How fetching works", "Πώς γίνεται η λήψη"],
-  howFetchingBody: [
-    "A cron trigger runs every minute and refreshes the few feeds that are due, using ETag and If-Modified-Since so unchanged feeds cost nothing. Feeds that publish often are checked more frequently; quiet or broken ones back off automatically.",
-    "Ένα cron trigger τρέχει κάθε λεπτό και ανανεώνει τις λίγες ροές που είναι ληξιπρόθεσμες, με ETag και If-Modified-Since ώστε οι αμετάβλητες ροές να μην κοστίζουν τίποτα. Όσες δημοσιεύουν συχνά ελέγχονται πιο συχνά· οι ήσυχες ή χαλασμένες αραιώνουν αυτόματα."
-  ],
 
   sidebarManageFeeds: ["Manage feeds", "Διαχείριση ροών"]
 };

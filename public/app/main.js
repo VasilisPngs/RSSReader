@@ -8,6 +8,7 @@ import { renderFeeds } from "./views/feeds.js";
 import { renderSettings } from "./views/settings.js";
 import { t, applyLanguage, i18nEvents } from "./i18n.js";
 import { applyTheme, themeEvents } from "./theme.js";
+import { prefsEvents } from "./prefs.js";
 
 const view = document.getElementById("view");
 const pill = document.getElementById("sync-pill");
@@ -242,6 +243,7 @@ async function boot() {
     paintPill();
   });
   themeEvents.addEventListener("changed", render);
+  prefsEvents.addEventListener("changed", render);
   syncEvents.addEventListener("state", paintPill);
   startRouter(render);
   paintPill();

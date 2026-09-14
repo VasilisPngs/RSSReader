@@ -15,6 +15,7 @@ import {
 import { navigate } from "../router.js";
 import { requestSync } from "../sync.js";
 import { t } from "../i18n.js";
+import { cardImage } from "../prefs.js";
 
 const PAGE_SIZE = 40;
 
@@ -53,7 +54,7 @@ function scopeTitle(params) {
 function articleRow(article, params) {
   const state = stateOf(article.id);
   const feed = feedById(article.feed_id);
-  const thumb = article.image_url
+  const thumb = article.image_url && cardImage() !== "none"
     ? el("img", {
         class: "entry-thumb",
         src: article.image_url,
@@ -175,7 +176,7 @@ export function renderArticles(container, params) {
     })
   );
 
-  const list = el("div", { class: "entries", id: "entry-list" });
+  const list = el("div", { class: "entries", id: "entry-list", dataset: { image: cardImage() } });
   container.append(list);
   paintList(list, articles, params);
 
