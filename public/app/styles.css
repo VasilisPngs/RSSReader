@@ -111,10 +111,10 @@ svg {
 }
 
 .brand-mark {
+  display: block;
   width: 26px;
   height: 26px;
-  border-radius: 9px;
-  background: linear-gradient(140deg, var(--accent), #ff9f45);
+  border-radius: 6px;
   box-shadow: 0 6px 18px var(--accent-soft);
 }
 
