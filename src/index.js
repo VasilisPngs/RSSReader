@@ -6,9 +6,14 @@ const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
 const BLOCKED_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal"]);
 const DISCOVER_TIMEOUT = 10000;
 
-function behindAccess(request, url) {
+async function behindAccess(request, url, ctx) {
   if (LOCAL_HOSTS.has(url.hostname)) return true;
-  return request.headers.has("cf-access-jwt-assertion");
+  if (request.headers.has("cf-access-jwt-assertion")) return true;
+  try {
+    const identity = ctx && ctx.access ? await ctx.access.getIdentity() : null;
+    if (identity && identity.email) return true;
+  } catch {}
+  return false;
 }
 
 function safeUrl(input) {
@@ -100,12 +105,12 @@ const ROUTES = {
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const route = ROUTES[url.pathname];
     if (!route) return json({ error: "not_found" }, 404);
     if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-    if (!behindAccess(request, url)) return json({ error: "forbidden" }, 403);
+    if (!(await behindAccess(request, url, ctx))) return json({ error: "forbidden" }, 403);
     try {
       return await route(request, env);
     } catch (error) {
