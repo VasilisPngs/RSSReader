@@ -1,5 +1,5 @@
 const STORAGE_KEY = "rssreader.card_image";
-const SIZES = ["small", "large", "none"];
+const SIZES = ["small", "medium", "large", "none"];
 
 export const prefsEvents = new EventTarget();
 

@@ -114,6 +114,7 @@ const STRINGS = {
   theme: ["Theme", "Θέμα"],
   cardImage: ["Article image", "Εικόνα άρθρου"],
   imageSmall: ["Small", "Μικρή"],
+  imageMedium: ["Medium", "Μεσαία"],
   imageLarge: ["Large", "Μεγάλη"],
   imageNone: ["Hidden", "Καμία"],
   themeSystem: ["System", "Σύστημα"],

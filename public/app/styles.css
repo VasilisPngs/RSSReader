@@ -473,6 +473,11 @@ textarea:focus {
   background: var(--surface-2);
 }
 
+.entries[data-image="medium"] .entry-thumb {
+  width: 124px;
+  height: 124px;
+}
+
 .entries[data-image="large"] .entry-main {
   flex-direction: column;
   align-items: stretch;
@@ -783,6 +788,11 @@ textarea:focus {
   .entry-thumb {
     width: 68px;
     height: 68px;
+  }
+
+  .entries[data-image="medium"] .entry-thumb {
+    width: 104px;
+    height: 104px;
   }
 }
 
