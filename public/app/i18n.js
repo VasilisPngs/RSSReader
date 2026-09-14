@@ -120,6 +120,33 @@ const STRINGS = {
   themeSystem: ["System", "Σύστημα"],
   themeLight: ["Light", "Φωτεινό"],
   themeDark: ["Dark", "Σκοτεινό"],
+  notifications: ["Notifications", "Ειδοποιήσεις"],
+  notificationsHint: [
+    "Turn this on once per device, then choose which feeds may notify you from each feed's options.",
+    "Ενεργοποίησέ το μία φορά σε κάθε συσκευή και μετά διάλεξε ποιες ροές μπορούν να σε ειδοποιούν, από τις επιλογές κάθε ροής."
+  ],
+  notificationsOn: ["On for this device", "Ενεργές σε αυτή τη συσκευή"],
+  notificationsOff: ["Off for this device", "Ανενεργές σε αυτή τη συσκευή"],
+  notificationsEnable: ["Enable notifications", "Ενεργοποίηση ειδοποιήσεων"],
+  notificationsDisable: ["Disable notifications", "Απενεργοποίηση"],
+  notificationsDenied: [
+    "Blocked by the browser. Allow notifications for this site in its settings, then try again.",
+    "Μπλοκαρισμένες από τον browser. Επίτρεψε τις ειδοποιήσεις για αυτή τη σελίδα από τις ρυθμίσεις της και ξαναδοκίμασε."
+  ],
+  notificationsUnsupported: [
+    "This browser cannot show notifications.",
+    "Αυτός ο browser δεν υποστηρίζει ειδοποιήσεις."
+  ],
+  notificationsInstall: [
+    "On iPhone and iPad, add the app to the Home Screen first.",
+    "Σε iPhone και iPad, πρόσθεσε πρώτα την εφαρμογή στην αρχική οθόνη."
+  ],
+  notificationsTest: ["Send a test", "Δοκιμαστική ειδοποίηση"],
+  notificationsSent: ["Test sent", "Στάλθηκε"],
+  notificationsFailed: ["Could not enable notifications", "Δεν ήταν δυνατή η ενεργοποίηση"],
+  notifyFeedOn: ["Notify me about this feed", "Ειδοποίησέ με για αυτή τη ροή"],
+  notifyFeedOff: ["Stop notifying me about this feed", "Μη με ειδοποιείς για αυτή τη ροή"],
+  notifyBadge: ["notifies", "ειδοποιεί"],
   sync: ["Sync", "Συγχρονισμός"],
   syncStatus: ["Status: {status}", "Κατάσταση: {status}"],
   queuedChanges: ["{count} queued", "{count} σε ουρά"],

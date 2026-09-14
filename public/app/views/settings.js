@@ -5,6 +5,7 @@ import { getSyncState, requestSync } from "../sync.js";
 import { t, language, languages, setLanguage } from "../i18n.js";
 import { themeMode, themeModes, setTheme } from "../theme.js";
 import { cardImage, cardImages, setCardImage } from "../prefs.js";
+import { pushSupported, pushPermission, currentSubscription, enablePush, disablePush, sendTestPush, standalone } from "../push.js";
 
 async function exportBackup() {
   const data = {};
@@ -17,6 +18,76 @@ async function exportBackup() {
   anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   toast(t("backupExported"));
+}
+
+async function paintNotifications(card) {
+  const rows = [...card.children].slice(2);
+  for (const row of rows) row.remove();
+
+  if (!pushSupported()) {
+    card.append(el("div", { class: "tiny", text: t("notificationsUnsupported") }));
+    if (!standalone()) card.append(el("div", { class: "tiny", text: t("notificationsInstall") }));
+    return;
+  }
+
+  const permission = pushPermission();
+  if (permission === "denied") {
+    card.append(el("div", { class: "banner", text: t("notificationsDenied") }));
+    return;
+  }
+
+  const subscription = await currentSubscription();
+  card.append(el("div", { class: "tiny", text: subscription ? t("notificationsOn") : t("notificationsOff") }));
+
+  if (subscription) {
+    card.append(
+      el("div", { class: "row" }, [
+        el("button", {
+          class: "btn grow",
+          type: "button",
+          text: t("notificationsTest"),
+          onclick: async (event) => {
+            event.currentTarget.disabled = true;
+            try {
+              await sendTestPush();
+              toast(t("notificationsSent"));
+            } catch {
+              toast(t("notificationsFailed"));
+            }
+            event.currentTarget.disabled = false;
+          }
+        }),
+        el("button", {
+          class: "btn grow danger",
+          type: "button",
+          text: t("notificationsDisable"),
+          onclick: async () => {
+            await disablePush();
+            paintNotifications(card);
+          }
+        })
+      ])
+    );
+    return;
+  }
+
+  card.append(
+    el("button", {
+      class: "btn primary block",
+      type: "button",
+      text: t("notificationsEnable"),
+      onclick: async (event) => {
+        event.currentTarget.disabled = true;
+        try {
+          await enablePush();
+        } catch {
+          toast(t("notificationsFailed"));
+        }
+        paintNotifications(card);
+      }
+    })
+  );
+  if (!standalone()) card.append(el("div", { class: "tiny", text: t("notificationsInstall") }));
 }
 
 export function renderSettings(container) {
@@ -99,6 +170,13 @@ export function renderSettings(container) {
     const node = syncCard.querySelector("#last-sync");
     if (node) node.textContent = t("lastSync", { value: value ? formatTimestamp(value, true) : t("never") });
   });
+
+  const notifications = el("div", { class: "card" }, [
+    el("h2", { text: t("notifications") }),
+    el("div", { class: "tiny", text: t("notificationsHint") })
+  ]);
+  container.append(notifications);
+  paintNotifications(notifications);
 
   container.append(
     el("div", { class: "card" }, [

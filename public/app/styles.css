@@ -492,6 +492,19 @@ textarea:focus {
 }
 
 .reader-body video,
+.reader-body audio {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 16px 0;
+  border-radius: var(--radius-m);
+  background: #000;
+}
+
+.reader-body audio {
+  background: transparent;
+}
+
 .reader-body iframe {
   width: 100%;
   max-width: 100%;
@@ -504,9 +517,12 @@ textarea:focus {
   background: #000;
 }
 
-.reader-body audio {
-  width: 100%;
-  margin: 16px 0;
+.reader-body iframe.social-embed {
+  aspect-ratio: auto;
+  height: 600px;
+  max-width: 550px;
+  background: transparent;
+  border-radius: 0;
 }
 
 .reader-body figure {

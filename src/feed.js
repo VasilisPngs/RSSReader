@@ -14,7 +14,7 @@ const NAMED_ENTITIES = {
   rdquo: '"'
 };
 
-const MAX_CONTENT = 24000;
+const MAX_CONTENT = 48000;
 const MAX_SUMMARY = 400;
 
 export function decodeText(input) {

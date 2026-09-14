@@ -11,6 +11,7 @@ import {
   updateFolder,
   deleteFolder,
   discoverFeed,
+  toggleFeedNotify,
   refreshFeeds,
   knownFeedUrl,
   importOpml,
@@ -112,6 +113,15 @@ function openFeedMenu(feed) {
       ]
     ),
     el("button", {
+      class: "btn block",
+      type: "button",
+      text: feed.notify ? t("notifyFeedOff") : t("notifyFeedOn"),
+      onclick: () => {
+        toggleFeedNotify(feed.id);
+        close();
+      }
+    }),
+    el("button", {
       class: "btn block danger",
       type: "button",
       text: t("deleteFeed"),
@@ -137,6 +147,7 @@ function feedRow(feed) {
         text: state && state.last_fetch_at ? t("checkedAt", { time: formatTimestamp(state.last_fetch_at) }) : t("notFetchedYet")
       })
     ]),
+    feed.notify ? el("span", { class: "badge", text: t("notifyBadge") }) : null,
     broken ? el("span", { class: "badge danger", text: t("feedError") }) : null,
     unread > 0 ? el("span", { class: "badge", text: String(unread) }) : null,
     el("button", { class: "icon-button", type: "button", text: "···", "aria-label": t("ariaFeedOptions"), onclick: () => openFeedMenu(feed) })

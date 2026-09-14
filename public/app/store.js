@@ -166,6 +166,7 @@ export async function createFeed({ title, feed_url, site_url, folder_id }) {
     title,
     feed_url,
     site_url: site_url || null,
+    notify: 0,
     position: feeds().length,
     created_at: now(),
     deleted_at: null
@@ -184,6 +185,12 @@ export async function deleteFeed(id) {
   const current = feedById(id);
   if (!current) return;
   await commit([{ table: "feeds", row: { ...current, deleted_at: now() } }]);
+}
+
+export async function toggleFeedNotify(id) {
+  const current = feedById(id);
+  if (!current) return;
+  await commit([{ table: "feeds", row: { ...current, notify: current.notify ? 0 : 1 } }]);
 }
 
 export async function createFolder(name) {

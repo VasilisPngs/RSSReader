@@ -1,4 +1,5 @@
 import { parseFeed } from "./feed.js";
+import { notifySubscribers } from "./push.js";
 
 const USER_AGENT = "RSSReader/1.0 (Cloudflare Workers; personal reader)";
 const ACCEPT = "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5";
@@ -62,7 +63,9 @@ function articleStatements(rows, rev) {
   return statements;
 }
 
-export async function pollFeeds(env, feeds, now) {
+const NOTICE_LIMIT = 4;
+
+export async function pollFeeds(env, feeds, now, options = {}) {
   if (feeds.length === 0) return { polled: 0, inserted: 0 };
 
   let budget = PARSE_BUDGET_CHARS;
@@ -70,6 +73,7 @@ export async function pollFeeds(env, feeds, now) {
   const cutoff = now - RETENTION_DAYS * 86400000;
   const articles = [];
   const states = [];
+  const notices = [];
 
   const responses = await Promise.all(
     feeds.map((feed) => fetchFeed(feed).catch((error) => ({ status: 0, error: String(error && error.message).slice(0, 200) })))
@@ -138,9 +142,11 @@ export async function pollFeeds(env, feeds, now) {
     }
 
     let added = 0;
+    const fresh = [];
     for (const item of feedArticles) {
       if (item.published_at < cutoff) continue;
       added += 1;
+      if (fresh.length < 3) fresh.push(item.title);
       articles.push({
         id: crypto.randomUUID(),
         feed_id: feed.id,
@@ -155,6 +161,8 @@ export async function pollFeeds(env, feeds, now) {
         fetched_at: now
       });
     }
+
+    if (added > 0 && feed.notify) notices.push({ feed, titles: fresh, count: added });
 
     states.push({
       feed_id: feed.id,
@@ -200,7 +208,19 @@ export async function pollFeeds(env, feeds, now) {
   }
 
   if (statements.length > 0) await env.DB.batch(statements);
-  return { polled: feeds.length, inserted: articles.length, parsed };
+
+  let notified = 0;
+  if (notices.length > 0 && options.notify !== false) {
+    const messages = notices.slice(0, NOTICE_LIMIT).map((notice) => ({
+      title: notice.feed.title || "RSSReader",
+      body: notice.count === 1 ? notice.titles[0] : notice.titles.join(" · "),
+      path: `/feed/${notice.feed.id}`,
+      tag: `feed-${notice.feed.id}`
+    }));
+    notified = await notifySubscribers(env, messages, options.subject || "mailto:reader@example.com");
+  }
+
+  return { polled: feeds.length, inserted: articles.length, parsed, notified };
 }
 
 export async function selectDueFeeds(env, now, limit = MAX_FEEDS_PER_TICK) {

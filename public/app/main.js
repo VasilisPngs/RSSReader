@@ -9,6 +9,7 @@ import { renderSettings } from "./views/settings.js";
 import { t, applyLanguage, i18nEvents } from "./i18n.js";
 import { applyTheme, themeEvents } from "./theme.js";
 import { prefsEvents } from "./prefs.js";
+import { pushEvents } from "./push.js";
 
 const view = document.getElementById("view");
 const pill = document.getElementById("sync-pill");
@@ -244,6 +245,7 @@ async function boot() {
   });
   themeEvents.addEventListener("changed", render);
   prefsEvents.addEventListener("changed", render);
+  pushEvents.addEventListener("changed", render);
   syncEvents.addEventListener("state", paintPill);
   startRouter(render);
   paintPill();

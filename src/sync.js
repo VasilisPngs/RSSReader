@@ -26,6 +26,7 @@ export const WRITABLE = {
     feed_url: { cast: text, required: true },
     site_url: { cast: text },
     position: { cast: int, required: true },
+    notify: { cast: bool, required: true },
     created_at: { cast: int, required: true },
     deleted_at: { cast: int }
   },

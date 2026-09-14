@@ -1,6 +1,7 @@
 import { handleSync, json } from "./sync.js";
 import { pollFeeds, selectDueFeeds, runScheduled, MAX_FEEDS_PER_TICK } from "./poller.js";
 import { parseFeed, discoverFeedUrl, looksLikeFeed } from "./feed.js";
+import { loadKeys, notifySubscribers } from "./push.js";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
 const BLOCKED_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal"]);
@@ -82,26 +83,83 @@ async function handleRefresh(request, env) {
 
   if (payload.feed_id) {
     const result = await env.DB.prepare(
-      `SELECT f.id, f.feed_url, s.etag, s.last_modified, s.interval_seconds, s.error_count
+      `SELECT f.id, f.feed_url, f.title, f.notify, s.etag, s.last_modified, s.interval_seconds, s.error_count
        FROM feeds f LEFT JOIN feed_state s ON s.feed_id = f.id
        WHERE f.id = ?1 AND f.deleted_at IS NULL`
     )
       .bind(payload.feed_id)
       .all();
-    const outcome = await pollFeeds(env, result.results || [], now);
+    const outcome = await pollFeeds(env, result.results || [], now, { subject: pushSubject(request) });
     return json(outcome);
   }
 
   await env.DB.prepare("UPDATE feed_state SET next_fetch_at = 0").run();
   const feeds = await selectDueFeeds(env, now, MAX_FEEDS_PER_TICK);
-  const outcome = await pollFeeds(env, feeds, now);
+  const outcome = await pollFeeds(env, feeds, now, { subject: pushSubject(request) });
   return json(outcome);
+}
+
+async function handlePushKey(request, env) {
+  const keys = await loadKeys(env);
+  return json({ publicKey: keys.publicKey });
+}
+
+async function handlePushSubscribe(request, env) {
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+  const endpoint = typeof payload.endpoint === "string" ? payload.endpoint : "";
+  const p256dh = payload.keys && typeof payload.keys.p256dh === "string" ? payload.keys.p256dh : "";
+  const auth = payload.keys && typeof payload.keys.auth === "string" ? payload.keys.auth : "";
+  if (!/^https:\/\//.test(endpoint) || !p256dh || !auth) return json({ error: "invalid_subscription" }, 400);
+  const subject = pushSubject(request);
+  await loadKeys(env);
+  await env.DB.prepare("UPDATE push_keys SET subject = ?1 WHERE id = 1").bind(subject).run();
+  await env.DB.prepare(
+    `INSERT INTO push_subscriptions (endpoint, p256dh, auth, created_at, last_seen_at) VALUES (?1, ?2, ?3, ?4, ?4)
+     ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, last_seen_at = excluded.last_seen_at`
+  )
+    .bind(endpoint, p256dh, auth, Date.now())
+    .run();
+  return json({ ok: true });
+}
+
+async function handlePushUnsubscribe(request, env) {
+  let payload = {};
+  try {
+    payload = await request.json();
+  } catch {}
+  if (typeof payload.endpoint === "string") {
+    await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?1").bind(payload.endpoint).run();
+  }
+  return json({ ok: true });
+}
+
+async function handlePushTest(request, env) {
+  const sent = await notifySubscribers(
+    env,
+    [{ title: "RSSReader", body: "Test notification", path: "/", tag: "rssreader-test" }],
+    pushSubject(request)
+  );
+  return json({ sent });
+}
+
+function pushSubject(request) {
+  const email = request.headers.get("cf-access-authenticated-user-email");
+  return email ? `mailto:${email}` : `https://${new URL(request.url).hostname}`;
 }
 
 const ROUTES = {
   "/api/sync": handleSync,
   "/api/discover": handleDiscover,
-  "/api/refresh": handleRefresh
+  "/api/refresh": handleRefresh,
+  "/api/push/key": handlePushKey,
+  "/api/push/subscribe": handlePushSubscribe,
+  "/api/push/unsubscribe": handlePushUnsubscribe,
+  "/api/push/test": handlePushTest
 };
 
 export default {

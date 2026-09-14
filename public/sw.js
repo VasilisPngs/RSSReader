@@ -1,4 +1,4 @@
-const VERSION = "v8";
+const VERSION = "v11";
 const CACHE = `rssreader-${VERSION}`;
 
 const SHELL = [
@@ -14,6 +14,7 @@ const SHELL = [
   "/app/i18n.js",
   "/app/theme.js",
   "/app/prefs.js",
+  "/app/push.js",
   "/app/sanitize.js",
   "/app/views/articles.js",
   "/app/views/article.js",
@@ -59,6 +60,41 @@ async function staleWhileRevalidate(event, cacheKey) {
   const response = await network;
   return response || new Response("Offline", { status: 503, headers: { "content-type": "text/plain" } });
 }
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {}
+  const title = data.title || "RSSReader";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: data.tag || "rssreader",
+      renotify: true,
+      data: { path: data.path || "/" }
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const path = (event.notification.data && event.notification.data.path) || "/";
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) {
+        if (new URL(client.url).origin !== self.location.origin) continue;
+        await client.focus();
+        if ("navigate" in client) await client.navigate(path);
+        return;
+      }
+      await self.clients.openWindow(path);
+    })()
+  );
+});
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
