@@ -152,6 +152,9 @@ version in `package.json`, Node on the Active LTS line in `.nvmrc`. Stable
 means the release line the upstream project supports for production, so Node
 follows LTS rather than Current.
 
+Clock times are always rendered on a 24-hour cycle (`hourCycle: "h23"`),
+in every language, regardless of what the locale would pick by default.
+
 ## Local development
 
 ```sh

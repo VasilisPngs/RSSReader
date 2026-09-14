@@ -44,9 +44,9 @@ function formatter(kind) {
   const key = `${locale()}:${kind}`;
   if (!formatters.has(key)) {
     const options = {
-      time: { hour: "2-digit", minute: "2-digit" },
+      time: { hour: "2-digit", minute: "2-digit", hourCycle: "h23" },
       day: { day: "numeric", month: "short" },
-      full: { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }
+      full: { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }
     };
     formatters.set(
       key,
