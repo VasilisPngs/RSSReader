@@ -23,7 +23,7 @@
 }
 
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]):not([data-theme="amoled"]) {
+  :root:not([data-theme="dark"]):not([data-theme="black"]) {
     --bg: #f4f5f8;
     --surface: #ffffff;
     --surface-2: #f0f2f6;
@@ -55,7 +55,7 @@
   color-scheme: dark;
 }
 
-:root[data-theme="amoled"] {
+:root[data-theme="black"] {
   --bg: #000000;
   --surface: #0a0b0d;
   --surface-2: #121319;

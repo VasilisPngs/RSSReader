@@ -1,6 +1,6 @@
 const STORAGE_KEY = "rssreader.theme";
-const MODES = ["system", "light", "dark", "amoled"];
-const COLORS = { light: "#f4f5f8", dark: "#0c0d10", amoled: "#000000" };
+const MODES = ["system", "light", "dark", "black"];
+const COLORS = { light: "#f4f5f8", dark: "#0c0d10", black: "#000000" };
 
 export const themeEvents = new EventTarget();
 
