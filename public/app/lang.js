@@ -11,11 +11,14 @@ export function pathLanguage(url) {
 }
 
 export function keepFeedLanguage(items, feedLanguage) {
-  const base = (feedLanguage || "").slice(0, 2).toLowerCase();
-  if (!base || items.length === 0) return items;
+  if (items.length === 0) return items;
   const languages = items.map((item) => pathLanguage(item.url));
-  if (!languages.includes(null)) return items;
-  return items.filter((item, index) => languages[index] === null || languages[index] === base);
+  const translated = languages.some((value) => value !== null);
+  if (!translated) return items;
+  if (languages.includes(null)) return items.filter((item, index) => languages[index] === null);
+  const base = (feedLanguage || "").slice(0, 2).toLowerCase();
+  if (!base || !languages.includes(base)) return items;
+  return items.filter((item, index) => languages[index] === base);
 }
 
 export function keepDefaultLanguage(articles) {
