@@ -1,5 +1,5 @@
 import { handleSync, json } from "./sync.js";
-import { pollFeeds, selectDueFeeds, runScheduled, MAX_FEEDS_PER_TICK } from "./poller.js";
+import { pollFeeds, selectDueFeeds, runScheduled, articleMessage, MAX_FEEDS_PER_TICK } from "./poller.js";
 import { parseFeed, discoverFeedUrl, looksLikeFeed } from "./feed.js";
 import { loadKeys, notifySubscribers } from "./push.js";
 
@@ -83,7 +83,7 @@ async function handleRefresh(request, env) {
 
   if (payload.feed_id) {
     const result = await env.DB.prepare(
-      `SELECT f.id, f.feed_url, f.title, f.notify, s.etag, s.last_modified, s.interval_seconds, s.error_count
+      `SELECT f.id, f.feed_url, f.title, f.site_url, f.notify, s.etag, s.last_modified, s.interval_seconds, s.error_count
        FROM feeds f LEFT JOIN feed_state s ON s.feed_id = f.id
        WHERE f.id = ?1 AND f.deleted_at IS NULL`
     )
@@ -139,11 +139,17 @@ async function handlePushUnsubscribe(request, env) {
 }
 
 async function handlePushTest(request, env) {
-  const sent = await notifySubscribers(
-    env,
-    [{ title: "RSSReader", body: "Test notification", path: "/", tag: "rssreader-test" }],
-    pushSubject(request)
-  );
+  const latest = await env.DB.prepare(
+    "SELECT a.id, a.title, a.summary, a.image_url, f.id AS feed_id, f.title AS feed_title, f.site_url, f.feed_url FROM articles a JOIN feeds f ON f.id = a.feed_id WHERE f.deleted_at IS NULL ORDER BY a.published_at DESC LIMIT 1"
+  ).first();
+  const message = latest
+    ? articleMessage({
+        feed: { id: latest.feed_id, title: latest.feed_title, site_url: latest.site_url, feed_url: latest.feed_url },
+        items: [{ id: latest.id, title: latest.title, summary: latest.summary, image_url: latest.image_url }],
+        count: 1
+      })
+    : { title: "RSSReader", body: "Test notification", path: "/", tag: "rssreader-test", timestamp: Date.now() };
+  const sent = await notifySubscribers(env, [message], pushSubject(request));
   return json({ sent });
 }
 

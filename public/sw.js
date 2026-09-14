@@ -1,4 +1,4 @@
-const VERSION = "v11";
+const VERSION = "v12";
 const CACHE = `rssreader-${VERSION}`;
 
 const SHELL = [
@@ -67,16 +67,17 @@ self.addEventListener("push", (event) => {
     data = event.data ? event.data.json() : {};
   } catch {}
   const title = data.title || "RSSReader";
-  event.waitUntil(
-    self.registration.showNotification(title, {
-      body: data.body || "",
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      tag: data.tag || "rssreader",
-      renotify: true,
-      data: { path: data.path || "/" }
-    })
-  );
+  const options = {
+    body: data.body || "",
+    icon: data.icon || "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: data.tag || "rssreader",
+    renotify: true,
+    timestamp: data.timestamp || Date.now(),
+    data: { path: data.path || "/" }
+  };
+  if (data.image) options.image = data.image;
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener("notificationclick", (event) => {

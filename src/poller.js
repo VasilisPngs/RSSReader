@@ -17,6 +17,33 @@ const MAX_ERROR_INTERVAL = 21600;
 
 export const RETENTION_DAYS = 45;
 
+function siteIcon(source) {
+  try {
+    const origin = new URL(source).origin;
+    return origin.startsWith("https://") ? `${origin}/favicon.ico` : null;
+  } catch {
+    return null;
+  }
+}
+
+export function articleMessage(notice) {
+  const first = notice.items[0] || {};
+  const icon = siteIcon(notice.feed.site_url || notice.feed.feed_url);
+  const single = notice.count === 1;
+  return {
+    title: (single ? first.title : notice.feed.title) || "RSSReader",
+    body: (single
+      ? [notice.feed.title, first.summary].filter(Boolean).join(" · ")
+      : notice.items.map((item) => item.title).filter(Boolean).join(" · ")
+    ).slice(0, 180),
+    icon,
+    image: first.image_url || null,
+    path: single && first.id ? `/article/${first.id}` : `/feed/${notice.feed.id}`,
+    tag: `feed-${notice.feed.id}`,
+    timestamp: Date.now()
+  };
+}
+
 function nextInterval(current, outcome) {
   const base = current || 1200;
   if (outcome === "new") return Math.max(MIN_INTERVAL, Math.round(base / 2));
@@ -143,14 +170,24 @@ export async function pollFeeds(env, feeds, now, options = {}) {
 
     let added = 0;
     const fresh = [];
+    const known = feed.notify
+      ? await env.DB.prepare("SELECT guid FROM articles WHERE feed_id = ?1 AND published_at >= ?2").bind(feed.id, cutoff).all()
+      : null;
+    const seen = known ? new Set((known.results || []).map((row) => row.guid)) : null;
     for (const item of feedArticles) {
       if (item.published_at < cutoff) continue;
-      added += 1;
-      if (fresh.length < 3) fresh.push(item.title);
+      const id = crypto.randomUUID();
+      const guid = item.guid.slice(0, 500);
+      if (seen && !seen.has(guid)) {
+        added += 1;
+        if (fresh.length < 3) fresh.push({ id, title: item.title, summary: item.summary, image_url: item.image_url });
+      } else if (!seen) {
+        added += 1;
+      }
       articles.push({
-        id: crypto.randomUUID(),
+        id,
         feed_id: feed.id,
-        guid: item.guid.slice(0, 500),
+        guid,
         url: item.url,
         title: item.title.slice(0, 400),
         author: item.author,
@@ -162,7 +199,7 @@ export async function pollFeeds(env, feeds, now, options = {}) {
       });
     }
 
-    if (added > 0 && feed.notify) notices.push({ feed, titles: fresh, count: added });
+    if (added > 0 && feed.notify) notices.push({ feed, items: fresh, count: added });
 
     states.push({
       feed_id: feed.id,
@@ -211,12 +248,7 @@ export async function pollFeeds(env, feeds, now, options = {}) {
 
   let notified = 0;
   if (notices.length > 0 && options.notify !== false) {
-    const messages = notices.slice(0, NOTICE_LIMIT).map((notice) => ({
-      title: notice.feed.title || "RSSReader",
-      body: notice.count === 1 ? notice.titles[0] : notice.titles.join(" · "),
-      path: `/feed/${notice.feed.id}`,
-      tag: `feed-${notice.feed.id}`
-    }));
+    const messages = notices.slice(0, NOTICE_LIMIT).map((notice) => articleMessage(notice));
     notified = await notifySubscribers(env, messages, options.subject || "mailto:reader@example.com");
   }
 
@@ -225,7 +257,7 @@ export async function pollFeeds(env, feeds, now, options = {}) {
 
 export async function selectDueFeeds(env, now, limit = MAX_FEEDS_PER_TICK) {
   const result = await env.DB.prepare(
-    `SELECT f.id, f.feed_url, s.etag, s.last_modified, s.interval_seconds, s.error_count
+    `SELECT f.id, f.feed_url, f.title, f.site_url, f.notify, s.etag, s.last_modified, s.interval_seconds, s.error_count
      FROM feeds f LEFT JOIN feed_state s ON s.feed_id = f.id
      WHERE f.deleted_at IS NULL AND COALESCE(s.next_fetch_at, 0) <= ?1
      ORDER BY COALESCE(s.next_fetch_at, 0) LIMIT ?2`

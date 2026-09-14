@@ -142,6 +142,8 @@ export async function loadKeys(env) {
   return { publicKey: stored.public_key, privateJwk: JSON.parse(stored.private_jwk), subject: stored.subject };
 }
 
+const MAX_SENDS = 24;
+
 export async function notifySubscribers(env, messages, subject) {
   if (messages.length === 0) return 0;
   const result = await env.DB.prepare("SELECT endpoint, p256dh, auth FROM push_subscriptions LIMIT 20").all();
@@ -151,8 +153,11 @@ export async function notifySubscribers(env, messages, subject) {
   const sender = keys.subject || subject || "https://rssreader.invalid";
   const stale = [];
   let sent = 0;
+  let budget = MAX_SENDS;
   for (const subscription of subscriptions) {
     for (const message of messages) {
+      if (budget <= 0) break;
+      budget -= 1;
       let status = 0;
       try {
         status = await sendPush(subscription, JSON.stringify(message), keys, sender);
