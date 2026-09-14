@@ -122,7 +122,7 @@ export async function handleSync(request, env) {
   try {
     for (const mutation of mutations) {
       const table = mutation && mutation.table;
-      if (!WRITABLE[table]) return json({ error: "table_not_writable", table: String(table) }, 400);
+      if (!WRITABLE[table]) continue;
       if (!grouped.has(table)) grouped.set(table, new Map());
       const row = normalizeRow(table, mutation.row || {});
       grouped.get(table).set(row[KEYS[table]], row);

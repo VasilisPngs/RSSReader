@@ -102,8 +102,18 @@ export async function applyRemote(changes) {
   });
 }
 
+async function dropOutbox(entries) {
+  await transact(["outbox"], "readwrite", (tx) => {
+    const outbox = tx.objectStore("outbox");
+    for (const entry of entries) outbox.delete([entry.table, entry.id]);
+  });
+}
+
 export async function listOutbox(limit) {
-  const entries = await transact(["outbox"], "readonly", (tx) => promisify(tx.objectStore("outbox").getAll()));
+  const stored = await transact(["outbox"], "readonly", (tx) => promisify(tx.objectStore("outbox").getAll()));
+  const stale = stored.filter((entry) => !TABLES[entry.table]);
+  if (stale.length > 0) await dropOutbox(stale);
+  const entries = stored.filter((entry) => Boolean(TABLES[entry.table]));
   const slice = entries.slice(0, limit);
   if (slice.length === 0) return { total: entries.length, items: [] };
   const stores = [...new Set(slice.map((entry) => entry.table))];
